@@ -12,6 +12,8 @@ import Employees from "@/pages/Employees";
 import Attendance from "@/pages/Attendance";
 import Payroll from "@/pages/Payroll";
 import Reports from "@/pages/Reports";
+import Leaves from "@/pages/Leaves";
+import Indemnity from "@/pages/Indemnity";
 import Login from "@/pages/Login";
 
 function Router() {
@@ -22,6 +24,8 @@ function Router() {
       <Route path="/employees" component={Employees} />
       <Route path="/attendance" component={Attendance} />
       <Route path="/payroll" component={Payroll} />
+      <Route path="/leaves" component={Leaves} />
+      <Route path="/indemnity" component={Indemnity} />
       <Route path="/reports" component={Reports} />
       <Route component={NotFound} />
     </Switch>

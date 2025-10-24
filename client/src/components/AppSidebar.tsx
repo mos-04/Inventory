@@ -16,6 +16,8 @@ import {
   Upload,
   DollarSign,
   FileText,
+  Calendar,
+  Wallet,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -41,6 +43,16 @@ const menuItems = [
     title: "Generate Payroll",
     url: "/payroll",
     icon: DollarSign,
+  },
+  {
+    title: "Leave Management",
+    url: "/leaves",
+    icon: Calendar,
+  },
+  {
+    title: "Indemnity",
+    url: "/indemnity",
+    icon: Wallet,
   },
   {
     title: "Reports",
