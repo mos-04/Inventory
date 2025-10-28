@@ -1,4 +1,4 @@
-A) 🔧 Technical Architecture
+  npx update-browserslist-db@latestA) 🔧 Technical Architecture
 📌 Tech Stack
 Layer	Technology
 Frontend	React + Tailwind CSS
