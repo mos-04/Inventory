@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PayrollTable from "@/components/PayrollTable";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -10,69 +10,89 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calculator } from "lucide-react";
-
-const mockPayrollData = [
-  {
-    emp_id: "101",
-    name: "John Smith",
-    designation: "Site Engineer",
-    worked_days: 26,
-    salary_earned: 4500,
-    fot_earned: 150,
-    hot_earned: 75,
-    food_allow: 260,
-    allow_other: 0,
-    not_earned: 0,
-    deductions: 0,
-    total_earnings: 4985,
-    comment: ""
-  },
-  {
-    emp_id: "102",
-    name: "Sarah Johnson",
-    designation: "HR Manager",
-    worked_days: 24,
-    salary_earned: 4800,
-    fot_earned: 0,
-    hot_earned: 120,
-    food_allow: 240,
-    allow_other: 100,
-    not_earned: 400,
-    deductions: 50,
-    total_earnings: 4810,
-    comment: "Advanced payment deducted"
-  },
-  {
-    emp_id: "103",
-    name: "Ahmed Ali",
-    designation: "Foreman",
-    worked_days: 26,
-    salary_earned: 3800,
-    fot_earned: 75,
-    hot_earned: 0,
-    food_allow: 260,
-    allow_other: 0,
-    not_earned: 0,
-    deductions: 0,
-    total_earnings: 4135,
-    comment: ""
-  },
-];
+import { supabase } from "../../../shared/supabaseClient"; 
 
 export default function Payroll() {
-  const [selectedMonth, setSelectedMonth] = useState("01-2025");
-  const [payrollData, setPayrollData] = useState(mockPayrollData);
+  const [months, setMonths] = useState<{ value: string; label: string }[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [payrollData, setPayrollData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const months = [
-    { value: "12-2024", label: "December 2024" },
-    { value: "01-2025", label: "January 2025" },
-    { value: "02-2025", label: "February 2025" },
-  ];
+  // Fetch distinct months from payroll on mount
+useEffect(() => {
+  async function fetchMonths() {
+    const { data, error } = await supabase
+      .from("payroll")
+      .select("month");
 
-  const handleCalculate = () => {
+    if (error) {
+      console.error("Error fetching months:", error);
+      return;
+    }
+
+    if (data && data.length > 0) {
+      const uniqueMonths = Array.from(new Set(data.map(row => row.month)))
+        .map(monthStr => ({
+          value: monthStr,
+          label: formatMonthLabel(monthStr),
+        }))
+        .sort((a, b) => (a.value < b.value ? 1 : -1));
+
+      setMonths(uniqueMonths);
+      setSelectedMonth(uniqueMonths[0].value);
+    }
+  }
+
+  fetchMonths(); // Correct: call the function ONCE on mount
+}, []);
+
+
+  // Format MM-YYYY to readable e.g. "January 2025"
+  function formatMonthLabel(monthStr: string) {
+    const [mm, yyyy] = monthStr.split("-");
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    ];
+    const monthIndex = parseInt(mm, 10) - 1;
+    return `${monthNames[monthIndex]} ${yyyy}`;
+  }
+
+  // Fetch payroll data when selectedMonth changes
+  useEffect(() => {
+    if (!selectedMonth) return;
+
+    async function fetchPayroll() {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("payroll")
+        .select("*")
+        .eq("month", selectedMonth);
+
+      if (error) {
+        console.error("Error fetching payroll data:", error);
+        setPayrollData([]);
+      } else {
+        setPayrollData(data || []);
+      }
+      setLoading(false);
+    }
+
+    fetchPayroll();
+  }, [selectedMonth]);
+
+  async function handleCalculate() {
+    // Your calculation logic here or trigger backend API
     console.log("Calculate payroll for:", selectedMonth);
-    setPayrollData(mockPayrollData);
-  };
+  }
+
+  async function handleSave(data: any[]) {
+    // Save logic as before
+  }
+
+  async function handleApprove(data: any[]) {
+    // Approve logic as before
+  }
 
   return (
     <div className="space-y-6">
@@ -93,26 +113,32 @@ export default function Payroll() {
               <SelectValue placeholder="Select month" />
             </SelectTrigger>
             <SelectContent>
-              {months.map((month) => (
-                <SelectItem key={month.value} value={month.value}>
-                  {month.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
+  {months.length === 0 ? (
+    <SelectItem disabled value="no-data">
+      No months found
+    </SelectItem>
+  ) : (
+    months.map((month) => (
+      <SelectItem key={month.value} value={month.value}>
+        {month.label}
+      </SelectItem>
+    ))
+  )}
+</SelectContent>
           </Select>
         </div>
-        <Button onClick={handleCalculate} data-testid="button-calculate">
+        <Button onClick={handleCalculate} data-testid="button-calculate" disabled={!selectedMonth}>
           <Calculator className="h-4 w-4 mr-2" />
           Calculate Payroll
         </Button>
       </div>
 
-      {payrollData.length > 0 && (
-        <PayrollTable
-          data={payrollData}
-          onSave={(data) => console.log("Save draft:", data)}
-          onApprove={(data) => console.log("Approve and generate:", data)}
-        />
+      {loading ? (
+        <p>Loading payroll data...</p>
+      ) : payrollData.length > 0 ? (
+        <PayrollTable data={payrollData} onSave={handleSave} onApprove={handleApprove} />
+      ) : (
+        <p>No payroll data available for {formatMonthLabel(selectedMonth)}</p>
       )}
     </div>
   );

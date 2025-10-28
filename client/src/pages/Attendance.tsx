@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AttendanceUpload from "@/components/AttendanceUpload";
 import { Label } from "@/components/ui/label";
 import {
@@ -8,15 +8,84 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "../../../shared/supabaseClient";
 
 export default function Attendance() {
-  const [selectedMonth, setSelectedMonth] = useState("01-2025");
+  const [months, setMonths] = useState<{ value: string; label: string }[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
 
-  const months = [
-    { value: "12-2024", label: "December 2024" },
-    { value: "01-2025", label: "January 2025" },
-    { value: "02-2025", label: "February 2025" },
-  ];
+  useEffect(() => {
+    async function fetchMonths() {
+      const { data, error } = await supabase.from("attendance").select("month");
+      if (error) {
+        console.error("Failed to fetch months:", error);
+        return;
+      }
+      if (data) {
+        const uniqueMonths = Array.from(new Set(data.map((row) => row.month)))
+          .map((monthStr) => {
+            const [mm, yyyy] = monthStr.split("-");
+            const monthNames = [
+              "January",
+              "February",
+              "March",
+              "April",
+              "May",
+              "June",
+              "July",
+              "August",
+              "September",
+              "October",
+              "November",
+              "December",
+            ];
+            const monthIndex = parseInt(mm) - 1;
+            return { value: monthStr, label: `${monthNames[monthIndex]} ${yyyy}` };
+          })
+          .sort((a, b) => (a.value < b.value ? 1 : -1));
+
+        setMonths(uniqueMonths);
+        setSelectedMonth(uniqueMonths[0]?.value || "");
+      }
+    }
+    fetchMonths();
+  }, []);
+
+  const handleUpload = async (records) => {
+    try {
+      for (const record of records) {
+        const {
+          emp_id,
+          worked_days,
+          normal_ot,
+          friday_ot,
+          holiday_ot,
+          unpaid_days,
+          comments,
+        } = record;
+        const { error } = await supabase.from("attendance").upsert({
+          emp_id,
+          month: selectedMonth,
+          worked_days,
+          normal_ot,
+          friday_ot,
+          holiday_ot,
+          unpaid_days,
+          comments,
+          updated_at: new Date().toISOString(),
+        });
+        if (error) {
+          console.error("Error saving attendance record:", error);
+          alert("Failed to save attendance records.");
+          return;
+        }
+      }
+      alert("Attendance records saved successfully.");
+    } catch (err) {
+      console.error(err);
+      alert("Unexpected error saving attendance.");
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -45,7 +114,7 @@ export default function Attendance() {
         </Select>
       </div>
 
-      <AttendanceUpload onUpload={(records) => console.log("Upload complete:", records)} />
+      <AttendanceUpload selectedMonth={selectedMonth} onUpload={handleUpload} />
     </div>
   );
 }
