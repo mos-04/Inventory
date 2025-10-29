@@ -1,9 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Use Vite env in browser; in SSR/Node, process.env with VITE_ prefix won't exist.
+// Resolve env safely in both browser (Vite) and Node without touching `process` in the browser.
+const viteEnv = (typeof import.meta !== 'undefined' && (import.meta as any).env) || undefined;
+// Only read process.env if `process` exists (Node). In the browser, `process` is undefined.
+const nodeEnv = (typeof process !== 'undefined' && (process as any).env) || undefined;
+
 // The anon key is safe to expose client-side.
-const supabaseUrl = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_URL) || process.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_ANON_KEY) || process.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = viteEnv?.VITE_SUPABASE_URL ?? nodeEnv?.VITE_SUPABASE_URL;
+const supabaseAnonKey = viteEnv?.VITE_SUPABASE_ANON_KEY ?? nodeEnv?.VITE_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 

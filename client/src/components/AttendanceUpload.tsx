@@ -15,10 +15,11 @@ import type { AttendanceRecord } from "@/types/attendance";
 interface AttendanceUploadProps {
   selectedMonth: string; // We need the selected month to assign records
   onUpload?: (records: AttendanceRecord[]) => void;
+  isSaving?: boolean;
 }
 
 
-export default function AttendanceUpload({ selectedMonth, onUpload }: AttendanceUploadProps) {
+export default function AttendanceUpload({ selectedMonth, onUpload, isSaving }: AttendanceUploadProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [fileName, setFileName] = useState("");
 
@@ -119,11 +120,11 @@ export default function AttendanceUpload({ selectedMonth, onUpload }: Attendance
               }
             />
             <div className="flex justify-end gap-2 mt-6">
-              <Button variant="outline" onClick={() => setRecords([])} data-testid="button-cancel-upload">
+              <Button variant="outline" onClick={() => setRecords([])} disabled={!!isSaving} data-testid="button-cancel-upload">
                 Cancel
               </Button>
-              <Button onClick={handleConfirm} disabled={validCount === 0} data-testid="button-confirm-upload">
-                Confirm & Save
+              <Button onClick={handleConfirm} disabled={validCount === 0 || !!isSaving} data-testid="button-confirm-upload">
+                {isSaving ? "Saving..." : "Confirm & Save"}
               </Button>
             </div>
           </CardContent>

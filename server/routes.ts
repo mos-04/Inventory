@@ -178,7 +178,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const status = 500;
       const body: any = { error: "Failed to upload attendance" };
       if (app.get("env") === "development") {
-        body.details = (error instanceof Error && error.message) ? error.message : String(error);
+        try {
+          if (error instanceof Error) {
+            body.details = error.message;
+            body.stack = error.stack;
+            // Attach pg error codes if present
+            const anyErr: any = error as any;
+            if (anyErr.code) body.code = anyErr.code;
+            if (anyErr.detail) body.detail = anyErr.detail;
+            if (anyErr.hint) body.hint = anyErr.hint;
+            if (anyErr.table) body.table = anyErr.table;
+            if (anyErr.schema) body.schema = anyErr.schema;
+            if (anyErr.constraint) body.constraint = anyErr.constraint;
+          } else {
+            body.details = JSON.stringify(error);
+          }
+        } catch {
+          body.details = String(error);
+        }
       }
       res.status(status).json(body);
     }

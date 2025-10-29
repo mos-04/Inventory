@@ -8,52 +8,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "../../../shared/supabaseClient";
 import { apiRequest } from "@/lib/queryClient";
+import { toast } from "@/hooks/use-toast";
 
 export default function Attendance() {
   const [months, setMonths] = useState<{ value: string; label: string }[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [uploadKey, setUploadKey] = useState(0); // remount uploader on success to clear state
 
   useEffect(() => {
-    async function fetchMonths() {
-      const { data, error } = await supabase.from("attendance").select("month");
-      if (error) {
-        console.error("Failed to fetch months:", error);
-        return;
-      }
-      if (data) {
-        const uniqueMonths = Array.from(new Set(data.map((row) => row.month)))
-          .map((monthStr) => {
-            const [mm, yyyy] = monthStr.split("-");
-            const monthNames = [
-              "January",
-              "February",
-              "March",
-              "April",
-              "May",
-              "June",
-              "July",
-              "August",
-              "September",
-              "October",
-              "November",
-              "December",
-            ];
-            const monthIndex = parseInt(mm) - 1;
-            return { value: monthStr, label: `${monthNames[monthIndex]} ${yyyy}` };
-          })
-          .sort((a, b) => (a.value < b.value ? 1 : -1));
-
-        setMonths(uniqueMonths);
-        setSelectedMonth(uniqueMonths[0]?.value || "");
-      }
+    // Generate the last 12 months as options: MM-YYYY
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    const options: { value: string; label: string }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const yyyy = String(d.getFullYear());
+      options.push({ value: `${mm}-${yyyy}`, label: `${monthNames[d.getMonth()]} ${yyyy}` });
     }
-    fetchMonths();
+    setMonths(options);
+    setSelectedMonth(options[0]?.value || "");
   }, []);
 
   const handleUpload = async (records: any[]) => {
     try {
+      if (!selectedMonth) {
+        toast({ title: "Select a month", description: "Please choose a month before saving.", variant: "default" });
+        return;
+      }
+      setIsSaving(true);
       // Map UI records to backend InsertAttendance payload
       const to2 = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
       const payload = records.map((r) => ({
@@ -67,11 +65,29 @@ export default function Attendance() {
         ot_hours_holiday: to2(r.holiday_ot),
       }));
 
-      await apiRequest("POST", "/api/attendance/bulk", payload);
-      alert("Attendance records saved successfully.");
-    } catch (err) {
+      const res = await apiRequest("POST", "/api/attendance/bulk", payload);
+      const body = await res.json().catch(() => null);
+      const count = Array.isArray(body) ? body.length : (Array.isArray(body?.created) ? body.created.length : payload.length);
+      toast({ title: "Saved", description: `Saved ${count} attendance record(s) for ${selectedMonth}.` });
+      // Clear the uploader state by remounting it
+      setUploadKey((k) => k + 1);
+    } catch (err: any) {
       console.error(err);
-      alert("Failed to save attendance records.");
+      // Extract server error details if available
+      let message = "Failed to save attendance records.";
+      const raw = String(err?.message ?? err);
+      const idx = raw.indexOf(": ");
+      const maybeJson = idx >= 0 ? raw.slice(idx + 2) : "";
+      try {
+        const parsed = JSON.parse(maybeJson);
+        message = parsed?.detail || parsed?.details || parsed?.error || message;
+        if (parsed?.code) message += ` (code ${parsed.code})`;
+      } catch {
+        // keep default message
+      }
+      toast({ title: "Upload failed", description: message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -102,7 +118,7 @@ export default function Attendance() {
         </Select>
       </div>
 
-      <AttendanceUpload selectedMonth={selectedMonth} onUpload={handleUpload} />
+      <AttendanceUpload key={uploadKey} selectedMonth={selectedMonth} onUpload={handleUpload} isSaving={isSaving} />
     </div>
   );
 }
