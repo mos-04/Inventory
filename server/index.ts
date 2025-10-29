@@ -47,7 +47,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  const httpServer = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -59,13 +59,13 @@ app.use((req, res, next) => {
 
 
   if (app.get("env") === "development") {
-    await setupVite(app, server);
+    await setupVite(app, httpServer);
   } else {
     serveStatic(app);
   }
 
-  const PORT = process.env.PORT || 5000;
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`Server running on http://127.0.0.1:${PORT}`);
-});
+  const PORT = Number(process.env.PORT ?? 5000);
+  httpServer.listen(PORT, '127.0.0.1', () => {
+    console.log(`Server running on http://127.0.0.1:${PORT}`);
+  });
 })();

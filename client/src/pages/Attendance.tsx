@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "../../../shared/supabaseClient";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Attendance() {
   const [months, setMonths] = useState<{ value: string; label: string }[]>([]);
@@ -51,39 +52,26 @@ export default function Attendance() {
     fetchMonths();
   }, []);
 
-  const handleUpload = async (records) => {
+  const handleUpload = async (records: any[]) => {
     try {
-      for (const record of records) {
-        const {
-          emp_id,
-          worked_days,
-          normal_ot,
-          friday_ot,
-          holiday_ot,
-          unpaid_days,
-          comments,
-        } = record;
-        const { error } = await supabase.from("attendance").upsert({
-          emp_id,
-          month: selectedMonth,
-          worked_days,
-          normal_ot,
-          friday_ot,
-          holiday_ot,
-          unpaid_days,
-          comments,
-          updated_at: new Date().toISOString(),
-        });
-        if (error) {
-          console.error("Error saving attendance record:", error);
-          alert("Failed to save attendance records.");
-          return;
-        }
-      }
+      // Map UI records to backend InsertAttendance payload
+      const to2 = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
+      const payload = records.map((r) => ({
+        emp_id: r.emp_id,
+        month: selectedMonth,
+        working_days: Array.isArray(r.dailyStatus) ? r.dailyStatus.length : 30,
+        present_days: r.worked_days,
+        absent_days: r.unpaid_days,
+        ot_hours_normal: to2(r.normal_ot),
+        ot_hours_friday: to2(r.friday_ot),
+        ot_hours_holiday: to2(r.holiday_ot),
+      }));
+
+      await apiRequest("POST", "/api/attendance/bulk", payload);
       alert("Attendance records saved successfully.");
     } catch (err) {
       console.error(err);
-      alert("Unexpected error saving attendance.");
+      alert("Failed to save attendance records.");
     }
   };
 

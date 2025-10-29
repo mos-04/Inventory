@@ -1,0 +1,134 @@
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle2, AlertCircle } from "lucide-react";
+import type { AttendanceRecord } from "@/types/attendance";
+import { useMemo } from "react";
+
+export type AttendancePreviewTableProps = {
+  records: AttendanceRecord[];
+  onChange: (index: number, patch: Partial<AttendanceRecord>) => void;
+};
+
+export function AttendancePreviewTable({ records, onChange }: AttendancePreviewTableProps) {
+  const { validCount, errorCount } = useMemo(() => {
+    const v = records.filter((r) => r.isValid).length;
+    const e = records.length - v;
+    return { validCount: v, errorCount: e };
+  }, [records]);
+
+  return (
+    <div className="space-y-4">
+      {records.length > 0 && (
+        <Alert>
+          <AlertDescription className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <span className="font-medium">{validCount} valid records</span>
+            {errorCount > 0 && (
+              <>
+                <AlertCircle className="h-4 w-4 text-destructive ml-4" />
+                <span className="font-medium text-destructive">{errorCount} errors found</span>
+              </>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader className="sticky top-0 bg-muted/50">
+            <TableRow>
+              <TableHead className="font-semibold">Emp ID</TableHead>
+              <TableHead className="font-semibold text-right">Worked Days</TableHead>
+              <TableHead className="font-semibold text-right">Normal OT</TableHead>
+              <TableHead className="font-semibold text-right">Friday OT</TableHead>
+              <TableHead className="font-semibold text-right">Holiday OT</TableHead>
+              <TableHead className="font-semibold text-right">Unpaid Days</TableHead>
+              <TableHead className="font-semibold">Status</TableHead>
+              <TableHead className="font-semibold">Comments</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {records.map((record, index) => (
+              <TableRow
+                key={index}
+                className={record.isValid ? "hover-elevate" : "bg-destructive/10"}
+                data-testid={`row-attendance-${record.emp_id || index}`}
+              >
+                <TableCell className="font-mono text-sm">
+                  <input
+                    className="w-28 bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
+                    value={record.emp_id}
+                    onChange={(e) => onChange(index, { emp_id: e.target.value.trim(), isValid: Boolean(e.target.value.trim()) })}
+                  />
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm">
+                  <input
+                    type="number"
+                    className="w-16 text-right bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
+                    value={record.worked_days}
+                    onChange={(e) => onChange(index, { worked_days: Number(e.target.value || 0) })}
+                  />
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm">
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="w-16 text-right bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
+                    value={record.normal_ot}
+                    onChange={(e) => onChange(index, { normal_ot: Number(e.target.value || 0) })}
+                  />
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm">
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="w-16 text-right bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
+                    value={record.friday_ot}
+                    onChange={(e) => onChange(index, { friday_ot: Number(e.target.value || 0) })}
+                  />
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm">
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="w-16 text-right bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
+                    value={record.holiday_ot}
+                    onChange={(e) => onChange(index, { holiday_ot: Number(e.target.value || 0) })}
+                  />
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm">
+                  <input
+                    type="number"
+                    className="w-16 text-right bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
+                    value={record.unpaid_days}
+                    onChange={(e) => onChange(index, { unpaid_days: Number(e.target.value || 0) })}
+                  />
+                </TableCell>
+                <TableCell>
+                  {record.isValid ? (
+                    <span className="text-green-600 text-sm flex items-center gap-1">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Valid
+                    </span>
+                  ) : (
+                    <span className="text-destructive text-sm flex items-center gap-1">
+                      <AlertCircle className="h-4 w-4" />
+                      {record.error || "Invalid"}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="whitespace-pre-wrap text-sm">
+                  <input
+                    className="w-full bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
+                    value={record.comments || ""}
+                    onChange={(e) => onChange(index, { comments: e.target.value })}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
