@@ -4,7 +4,71 @@ import { storage } from "./storage";
 import { insertEmployeeSchema, insertAttendanceSchema, insertPayrollSchema, insertLeaveSchema, insertIndemnitySchema } from "@shared/schema";
 import { z } from "zod";
 
+
 export async function registerRoutes(app: Express): Promise<Server> {
+
+//   app.get("/api/health/db", async (req, res) => {
+//   try {
+//     const url = process.env.DATABASE_URL;
+//     if (!url) {
+//       return res.json({
+//         connected: false,
+//         reason: "DATABASE_URL not set",
+//         mode: "memory",
+//         timestamp: new Date().toISOString(),
+//       });
+//     }
+
+//     let host: string;
+//     let port: number;
+//     try {
+//       const u = new URL(url);
+//       host = u.hostname;
+//       port = Number(u.port) || 5432;
+//     } catch {
+//       return res.json({
+//         connected: false,
+//         reason: "Invalid DATABASE_URL",
+//         mode: "db-configured",
+//         timestamp: new Date().toISOString(),
+//       });
+//     }
+//     let dnsOk = false;
+//     try {
+//       await dns.lookup(host);
+//       dnsOk = true;
+//     } catch { /* ignore */ }
+
+//     const tcpOk = await new Promise<boolean>((resolve) => {
+//       const s = net.createConnection({ host, port, timeout: 2500 });
+//       s.once("connect", () => { s.end(); resolve(true); });
+//       s.once("timeout", () => { s.destroy(); resolve(false); });
+//       s.once("error", () => resolve(false));
+//     });
+//        let sqlOk = false;
+//     try {
+//       const pg = await import("pg").catch(() => null as any);
+//       if (pg?.Client) {
+//         const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
+//         await client.connect();
+//         await client.query("select 1");
+//         await client.end();
+//         sqlOk = true;
+//       }
+//     } catch { /* ignore */ }
+
+//     const connected = sqlOk || (dnsOk && tcpOk);
+//     res.json({
+//       connected,
+//       details: { dnsOk, tcpOk, sqlOk, host, port },
+//       mode: "db-configured",
+//       timestamp: new Date().toISOString(),
+//     });
+//   } catch (err: any) {
+//     res.status(500).json({ connected: false, error: err?.message || "Unknown error" });
+//   }
+// });
+
   
   app.get("/api/employees", async (req, res) => {
     try {
@@ -106,7 +170,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
-      res.status(500).json({ error: "Failed to upload attendance" });
+      // Log the error server-side for debugging
+      // Include error details in the response when in development to help trace the issue
+      // but avoid leaking internals in production.
+      // eslint-disable-next-line no-console
+      console.error("Attendance bulk upload error:", error);
+      const status = 500;
+      const body: any = { error: "Failed to upload attendance" };
+      if (app.get("env") === "development") {
+        body.details = (error instanceof Error && error.message) ? error.message : String(error);
+      }
+      res.status(status).json(body);
     }
   });
   

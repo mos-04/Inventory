@@ -1,10 +1,32 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = "https://stzgborngxdsygyfoadz.supabase.co";
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0emdib3JuZ3hkc3lneWZvYWR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2MzI5ODIsImV4cCI6MjA3NzIwODk4Mn0.94jt07uDOLl1ucr-F9l28tkEN2-DHv_XOkQtnBHCXyU";
+// Use Vite env in browser; in SSR/Node, process.env with VITE_ prefix won't exist.
+// The anon key is safe to expose client-side.
+const supabaseUrl = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_URL) || process.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_ANON_KEY) || process.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase environment variables");
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
+function createNoopSupabase() {
+  const ok = async () => ({ data: null, error: null } as const);
+  const okArray = async () => ({ data: [] as any[], error: null, count: 0 } as const);
+  return {
+    from: () => ({
+      select: okArray,
+      insert: ok,
+      upsert: ok,
+      update: ok,
+      delete: ok,
+      eq: () => ({ select: okArray }),
+    }),
+    rpc: ok,
+    auth: {
+      getSession: ok,
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } }, error: null } as const),
+    },
+  } as const;
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl as string, supabaseAnonKey as string)
+  : (createNoopSupabase() as unknown as ReturnType<typeof createClient>);
