@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -13,24 +13,69 @@ import {
 import { Download, FileSpreadsheet, FileText } from "lucide-react";
 
 export default function Reports() {
-  const [selectedMonth, setSelectedMonth] = useState("01-2025");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [months, setMonths] = useState<{ value: string; label: string }[]>([]);
   const [format, setFormat] = useState("excel");
   const [selectedColumns, setSelectedColumns] = useState<string[]>([
-    "emp_id", "name", "designation", "salary", "total_earnings"
+    "emp_id", "name", "designation", "salary", "worked_days", "normal_ot", "friday_ot", "holiday_ot", "total_earnings"
   ]);
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const months = [
-    { value: "12-2024", label: "December 2024" },
-    { value: "01-2025", label: "January 2025" },
-    { value: "02-2025", label: "February 2025" },
-  ];
+  // Derive months from payroll table (single call)
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/payroll", { credentials: "include" });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        const rawMonths: string[] = Array.from(
+          new Set(
+            (data || [])
+              .map((p: any) => p.month)
+              .filter((m: any): m is string => typeof m === "string")
+          )
+        );
+        const uniqueMonths = rawMonths
+          .map((m: string) => {
+            const [mm, yyyy] = m.split("-");
+            const names = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+            return { value: m, label: `${names[parseInt(mm)-1]} ${yyyy}` };
+          })
+          .sort((a, b) => (a.value < b.value ? 1 : -1));
+        setMonths(uniqueMonths);
+        setSelectedMonth(uniqueMonths.length ? uniqueMonths[0].value : "");
+      } catch (err) {
+        console.error("Failed to load months", err);
+      }
+    })();
+  }, []);
+
+  // Load report rows whenever month changes
+  useEffect(() => {
+    if (!selectedMonth) return;
+    (async () => {
+      setLoading(true); setError(null);
+      try {
+        const res = await fetch(`/api/reports?month=${encodeURIComponent(selectedMonth)}`, { credentials: "include" });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        setRows(Array.isArray(data) ? data : []);
+      } catch (err: any) {
+        setError(err.message || "Failed to load report");
+        setRows([]);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [selectedMonth]);
 
   const availableColumns = [
     { id: "emp_id", label: "Employee ID" },
     { id: "name", label: "Name" },
     { id: "designation", label: "Designation" },
-    { id: "project", label: "Project" },
-    { id: "category", label: "Category" },
+    { id: "department", label: "Department" },
     { id: "salary", label: "Basic Salary" },
     { id: "worked_days", label: "Worked Days" },
     { id: "normal_ot", label: "Normal OT" },
@@ -51,11 +96,15 @@ export default function Reports() {
   };
 
   const handleDownload = () => {
-    console.log("Download report:", {
-      month: selectedMonth,
-      format,
-      columns: selectedColumns
-    });
+    const header = selectedColumns.join(",");
+    const csvLines = rows.map(r => selectedColumns.map(c => JSON.stringify(r[c] ?? "")).join(","));
+    const blob = new Blob([header + "\n" + csvLines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `report-${selectedMonth}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -69,9 +118,9 @@ export default function Reports() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Export Salary Sheet</CardTitle>
+          <CardTitle>Monthly Salary Sheet</CardTitle>
           <CardDescription>
-            Select month and format to download payroll report
+            Aggregated payroll and attendance for selected month
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -147,6 +196,12 @@ export default function Reports() {
             ) : (
               <FileText className="h-10 w-10 text-muted-foreground" />
             )}
+          </div>
+
+          <div className="mt-6 space-y-2">
+            {loading && <p>Loading report...</p>}
+            {error && <p className="text-destructive text-sm">{error}</p>}
+            {!loading && !error && rows.length === 0 && <p>No data for {selectedMonth}</p>}
           </div>
         </CardContent>
       </Card>

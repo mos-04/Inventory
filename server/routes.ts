@@ -371,6 +371,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.get("/api/reports", async (req, res) => {
+    try {
+      const month = (req.query.month as string | undefined) || "";
+      if (!month) return res.status(400).json({ error: "month query param (MM-YYYY) is required" });
+
+      const [emps, monthAttendance, monthPayroll] = await Promise.all([
+        storage.getEmployees(),
+        storage.getAttendance(month),
+        storage.getPayroll(month),
+      ]);
+
+      const attMap = new Map<string, any>();
+      for (const a of monthAttendance) attMap.set(a.emp_id, a);
+
+      const payMap = new Map<string, any>();
+      for (const p of monthPayroll) payMap.set(p.emp_id, p);
+
+      const rows = emps.map((e) => {
+        const a = attMap.get(e.emp_id);
+        const p = payMap.get(e.emp_id);
+
+        // Attendance-driven numbers
+        const worked_days = a?.present_days ?? 0;
+        const working_days = a?.working_days ?? 0;
+        const normal_ot = Number(a?.ot_hours_normal ?? 0);
+        const friday_ot = Number(a?.ot_hours_friday ?? 0);
+        const holiday_ot = Number(a?.ot_hours_holiday ?? 0);
+
+        // Base and rates from employee record
+        const basic_salary = Number(e.basic_salary ?? 0);
+        const rate_normal = Number(e.ot_rate_normal ?? 0);
+        const rate_friday = Number(e.ot_rate_friday ?? 0);
+        const rate_holiday = Number(e.ot_rate_holiday ?? 0);
+
+        // Compute amounts from attendance if payroll row absent
+        const ot_amount_calc = normal_ot * rate_normal + friday_ot * rate_friday + holiday_ot * rate_holiday;
+
+        // Food allowance based on policy
+        let food_allow_calc = 0;
+        if (e.food_allowance_type === "per_day") {
+          food_allow_calc = Number(e.food_allowance_amount ?? 0) * worked_days;
+        } else if (e.food_allowance_type === "fixed") {
+          food_allow_calc = Number(e.food_allowance_amount ?? 0);
+        }
+
+        // Prefer persisted payroll amounts if available, otherwise use calculated
+        const food_allow = p ? Number(p.food_allowance ?? 0) : food_allow_calc;
+        const ot_amount = p ? Number(p.ot_amount ?? 0) : ot_amount_calc;
+        const deductions = p ? Number(p.deductions ?? 0) : 0;
+        const gross_salary = p ? Number(p.gross_salary ?? 0) : (basic_salary + ot_amount + food_allow);
+        const net_salary = p ? Number(p.net_salary ?? 0) : (gross_salary - deductions);
+
+        return {
+          emp_id: e.emp_id,
+          name: e.name,
+          designation: e.designation,
+          department: e.department,
+          salary: basic_salary,
+          worked_days,
+          working_days,
+          normal_ot,
+          friday_ot,
+          holiday_ot,
+          food_allow,
+          deductions,
+          gross_salary,
+          total_earnings: net_salary,
+          month,
+        };
+      });
+
+      res.json(rows);
+    } catch (error) {
+      console.error("/api/reports error:", error);
+      res.status(500).json({ error: "Failed to build report" });
+    }
+  });
+
   app.get("/api/indemnity/:empId", async (req, res) => {
     try {
       const indemnity = await storage.getIndemnityByEmployee(req.params.empId);

@@ -14,6 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 export default function Attendance() {
   const [months, setMonths] = useState<{ value: string; label: string }[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [uploaderKey, setUploaderKey] = useState(0);
 
   useEffect(() => {
     async function fetchMonths() {
@@ -69,6 +70,7 @@ export default function Attendance() {
 
       await apiRequest("POST", "/api/attendance/bulk", payload);
       alert("Attendance records saved successfully.");
+      setUploaderKey((k) => k + 1);
     } catch (err) {
       console.error(err);
       alert("Failed to save attendance records.");
@@ -102,7 +104,7 @@ export default function Attendance() {
         </Select>
       </div>
 
-      <AttendanceUpload selectedMonth={selectedMonth} onUpload={handleUpload} />
+      <AttendanceUpload key={uploaderKey} selectedMonth={selectedMonth} onUpload={handleUpload} />
     </div>
   );
 }
