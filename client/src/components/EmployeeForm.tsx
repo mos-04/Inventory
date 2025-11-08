@@ -128,13 +128,13 @@ export default function EmployeeForm({ initialData, onSubmit, onCancel }: Employ
           </div>
           <div className="space-y-2">
             <Label htmlFor="project" className="text-sm font-medium">
-              Project <span className="text-destructive">*</span>
+              Department <span className="text-destructive">*</span>
             </Label>
             <Input
               id="project"
               value={formData.project}
               onChange={(e) => updateField("project", e.target.value)}
-              placeholder="e.g., Tower A"
+              placeholder="e.g., Engineering"
               required
               data-testid="input-project"
               className="h-10"
