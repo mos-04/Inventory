@@ -10,21 +10,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+// Badge removed: category no longer displayed.
 
-interface Employee {
+interface EmployeeRow {
   emp_id: string;
   name: string;
   designation: string;
-  category: "Direct" | "Indirect";
-  project: string;
+  department: string;
   basic_salary: number;
   doj: string;
 }
 
 interface EmployeeTableProps {
-  employees: Employee[];
-  onEdit?: (employee: Employee) => void;
+  employees: EmployeeRow[];
+  onEdit?: (employee: EmployeeRow) => void;
   onDelete?: (empId: string) => void;
 }
 
@@ -34,7 +33,7 @@ export default function EmployeeTable({ employees, onEdit, onDelete }: EmployeeT
   const filteredEmployees = employees.filter((emp) =>
     emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.emp_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.project.toLowerCase().includes(searchTerm.toLowerCase())
+    emp.department.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -59,8 +58,7 @@ export default function EmployeeTable({ employees, onEdit, onDelete }: EmployeeT
               <TableHead className="font-semibold">Emp ID</TableHead>
               <TableHead className="font-semibold">Name</TableHead>
               <TableHead className="font-semibold">Designation</TableHead>
-              <TableHead className="font-semibold">Category</TableHead>
-              <TableHead className="font-semibold">Project</TableHead>
+              <TableHead className="font-semibold">Department</TableHead>
               <TableHead className="font-semibold text-right">Salary</TableHead>
               <TableHead className="font-semibold">DOJ</TableHead>
               <TableHead className="font-semibold text-right">Actions</TableHead>
@@ -76,12 +74,7 @@ export default function EmployeeTable({ employees, onEdit, onDelete }: EmployeeT
                 <TableCell className="font-mono text-sm">{employee.emp_id}</TableCell>
                 <TableCell className="font-medium">{employee.name}</TableCell>
                 <TableCell className="text-sm">{employee.designation}</TableCell>
-                <TableCell>
-                  <Badge variant={employee.category === "Direct" ? "default" : "secondary"}>
-                    {employee.category}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-sm">{employee.project}</TableCell>
+                <TableCell className="text-sm">{employee.department}</TableCell>
                 <TableCell className="text-right font-mono text-sm">
                   ${employee.basic_salary.toLocaleString()}
                 </TableCell>

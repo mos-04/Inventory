@@ -75,6 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const employees = await storage.getEmployees();
       res.json(employees);
     } catch (error) {
+      console.error("/api/employees error:", error);
       res.status(500).json({ error: "Failed to fetch employees" });
     }
   });
@@ -134,6 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const attendance = await storage.getAttendance(month);
       res.json(attendance);
     } catch (error) {
+      console.error("/api/attendance error:", error);
       res.status(500).json({ error: "Failed to fetch attendance" });
     }
   });
@@ -190,6 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const payroll = await storage.getPayroll(month);
       res.json(payroll);
     } catch (error) {
+      console.error("/api/payroll error:", error);
       res.status(500).json({ error: "Failed to fetch payroll" });
     }
   });
@@ -266,6 +269,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Payroll generation error:", error);
       res.status(500).json({ error: "Failed to generate payroll" });
+    }
+  });
+
+  // Mark indemnity as paid (simple status update)
+  app.patch("/api/indemnity/:empId/pay", async (req, res) => {
+    try {
+      const record = await storage.updateIndemnity(req.params.empId, {
+        status: "Paid",
+        indemnity_amount: req.body?.indemnity_amount, // optional override
+      });
+      if (!record) return res.status(404).json({ error: "Indemnity record not found" });
+      res.json(record);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to mark indemnity paid" });
     }
   });
   

@@ -1,80 +1,55 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import IndemnityTable from "@/components/IndemnityTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp, Users } from "lucide-react";
-
-const mockIndemnityRecords = [
-  {
-    emp_id: "101",
-    emp_name: "John Smith",
-    designation: "Site Engineer",
-    doj: "2023-01-15",
-    years_of_service: 2,
-    basic_salary: 4500,
-    indemnity_amount: 9000,
-    status: "Active" as const
-  },
-  {
-    emp_id: "102",
-    emp_name: "Sarah Johnson",
-    designation: "HR Manager",
-    doj: "2022-06-20",
-    years_of_service: 2.5,
-    basic_salary: 5200,
-    indemnity_amount: 13000,
-    status: "Active" as const
-  },
-  {
-    emp_id: "103",
-    emp_name: "Ahmed Ali",
-    designation: "Foreman",
-    doj: "2023-03-10",
-    years_of_service: 1.8,
-    basic_salary: 3800,
-    indemnity_amount: 6840,
-    status: "Active" as const
-  },
-  {
-    emp_id: "104",
-    emp_name: "Maria Garcia",
-    designation: "Accountant",
-    doj: "2022-11-05",
-    years_of_service: 2.2,
-    basic_salary: 4800,
-    indemnity_amount: 10560,
-    status: "Active" as const
-  },
-  {
-    emp_id: "105",
-    emp_name: "David Chen",
-    designation: "Site Supervisor",
-    doj: "2021-02-28",
-    years_of_service: 4,
-    basic_salary: 4200,
-    indemnity_amount: 16800,
-    status: "Paid" as const
-  },
-];
+interface EmployeeLite { emp_id: string; name: string; designation: string; doj: string; basic_salary: string; }
+interface IndemnityRow { emp_id: string; years_of_service: number; indemnity_amount: number; status: "Active"|"Paid"|"Pending"; }
 
 export default function Indemnity() {
-  const [records, setRecords] = useState(mockIndemnityRecords);
+  const [records, setRecords] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<Record<string, EmployeeLite>>({});
 
-  const handlePay = (empId: string) => {
-    console.log("Process indemnity payment for:", empId);
-    setRecords(prev =>
-      prev.map(record =>
-        record.emp_id === empId ? { ...record, status: "Paid" as const } : record
-      )
-    );
+  async function loadData() {
+    try {
+      const [indRes, empRes] = await Promise.all([
+        fetch("/api/indemnity", { credentials: "include" }),
+        fetch("/api/employees", { credentials: "include" })
+      ]);
+      const indemnity = indRes.ok ? await indRes.json() : [];
+      const emps = empRes.ok ? await empRes.json() : [];
+      const map: Record<string, EmployeeLite> = {};
+      (emps || []).forEach((e: any) => { map[e.emp_id] = { emp_id: e.emp_id, name: e.name, designation: e.designation, doj: e.doj, basic_salary: e.basic_salary }; });
+      setEmployees(map);
+      const tableRows = (indemnity || []).map((r: any) => ({
+        emp_id: r.emp_id,
+        emp_name: map[r.emp_id]?.name || r.emp_id,
+        designation: map[r.emp_id]?.designation || "",
+        doj: map[r.emp_id]?.doj || "",
+        years_of_service: Number(r.years_of_service || 0),
+        basic_salary: Number(map[r.emp_id]?.basic_salary || 0),
+        indemnity_amount: Number(r.indemnity_amount || 0),
+        status: r.status as "Active"|"Paid"|"Pending",
+      }));
+      setRecords(tableRows);
+    } catch (err) {
+      console.error("Failed to load indemnity data", err);
+    }
+  }
+
+  useEffect(() => { loadData(); }, []);
+
+  const handlePay = async (empId: string) => {
+    // No dedicated pay endpoint; if needed, this could call an update route when available.
+    alert("Mark as paid not implemented on server yet.");
   };
 
   const handleEdit = (record: any) => {
     console.log("Edit indemnity record:", record);
   };
 
-  const totalIndemnity = records.reduce((acc, r) => acc + r.indemnity_amount, 0);
-  const activeRecords = records.filter(r => r.status === "Active").length;
-  const paidRecords = records.filter(r => r.status === "Paid").length;
+  const totalIndemnity = records.reduce((acc, r: any) => acc + r.indemnity_amount, 0);
+  const activeRecords = records.filter((r: any) => r.status === "Active").length;
+  const paidRecords = records.filter((r: any) => r.status === "Paid").length;
 
   return (
     <div className="space-y-6">
@@ -140,11 +115,7 @@ export default function Indemnity() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <IndemnityTable
-            records={records}
-            onPay={handlePay}
-            onEdit={handleEdit}
-          />
+          <IndemnityTable records={records} onPay={handlePay} onEdit={handleEdit} />
         </CardContent>
       </Card>
 

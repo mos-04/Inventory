@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LeaveRequestForm from "@/components/LeaveRequestForm";
 import LeaveRequestsTable from "@/components/LeaveRequestsTable";
 import { Button } from "@/components/ui/button";
@@ -13,74 +13,76 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const mockLeaveRequests = [
-  {
-    id: "LR-001",
-    emp_id: "101",
-    emp_name: "John Smith",
-    leave_type: "annual",
-    start_date: "2025-02-01",
-    end_date: "2025-02-05",
-    days: 5,
-    reason: "Family vacation planned for next month",
-    status: "Pending" as const,
-    submitted_at: "2025-01-20"
-  },
-  {
-    id: "LR-002",
-    emp_id: "102",
-    emp_name: "Sarah Johnson",
-    leave_type: "sick",
-    start_date: "2025-01-25",
-    end_date: "2025-01-26",
-    days: 2,
-    reason: "Medical appointment and recovery",
-    status: "Approved" as const,
-    submitted_at: "2025-01-24"
-  },
-  {
-    id: "LR-003",
-    emp_id: "103",
-    emp_name: "Ahmed Ali",
-    leave_type: "emergency",
-    start_date: "2025-01-28",
-    end_date: "2025-01-29",
-    days: 2,
-    reason: "Family emergency - urgent travel required",
-    status: "Pending" as const,
-    submitted_at: "2025-01-27"
-  },
-  {
-    id: "LR-004",
-    emp_id: "104",
-    emp_name: "Maria Garcia",
-    leave_type: "annual",
-    start_date: "2025-01-15",
-    end_date: "2025-01-18",
-    days: 4,
-    reason: "Personal trip - already returned",
-    status: "Rejected" as const,
-    submitted_at: "2025-01-10"
-  },
-];
+// Removed mockLeaveRequests; now fetched from /api/leaves
+
+interface LeaveRecord {
+  id: number;
+  emp_id: string;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  days: number;
+  reason: string;
+  status: "Pending" | "Approved" | "Rejected";
+  submitted_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}
 
 export default function Leaves() {
-  const [requests, setRequests] = useState(mockLeaveRequests);
+  const [requests, setRequests] = useState<LeaveRecord[]>([]);
+  const [employees, setEmployees] = useState<Record<string, { name: string }>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
 
-  const handleApprove = (id: string) => {
-    console.log("Approve leave:", id);
-    setRequests(prev =>
-      prev.map(req => req.id === id ? { ...req, status: "Approved" as const } : req)
-    );
+  async function loadLeaves(status?: string) {
+    try {
+      const url = status ? `/api/leaves?status=${encodeURIComponent(status)}` : "/api/leaves";
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setRequests(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load leaves", err);
+    }
+  }
+
+  useEffect(() => {
+    loadLeaves();
+    // Load employees for name mapping
+    (async () => {
+      try {
+        const res = await fetch("/api/employees", { credentials: "include" });
+        const list = res.ok ? await res.json() : [];
+        const map: Record<string, { name: string }> = {};
+        (list || []).forEach((e: any) => { map[e.emp_id] = { name: e.name }; });
+        setEmployees(map);
+      } catch (err) {
+        console.error("Failed to load employees for leaves mapping", err);
+      }
+    })();
+  }, []);
+
+  const handleApprove = async (id: number) => {
+    try {
+      const res = await fetch(`/api/leaves/${id}/approve`, { method: "PATCH", credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      await loadLeaves();
+    } catch (err) {
+      console.error("Approve failed", err);
+      alert("Approve failed");
+    }
   };
 
-  const handleReject = (id: string) => {
-    console.log("Reject leave:", id);
-    setRequests(prev =>
-      prev.map(req => req.id === id ? { ...req, status: "Rejected" as const } : req)
-    );
+  const handleReject = async (id: number) => {
+    try {
+      const res = await fetch(`/api/leaves/${id}/reject`, { method: "PATCH", credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      await loadLeaves();
+    } catch (err) {
+      console.error("Reject failed", err);
+      alert("Reject failed");
+    }
   };
 
   const handleView = (request: any) => {
@@ -88,27 +90,54 @@ export default function Leaves() {
     setSelectedRequest(request);
   };
 
-  const handleSubmit = (data: any) => {
-    console.log("New leave request:", data);
-    const newRequest = {
-      id: `LR-${String(requests.length + 1).padStart(3, '0')}`,
-      emp_id: "101",
-      emp_name: "Current User",
+  const handleSubmit = async (data: any) => {
+    // Basic mapping; emp_id would come from auth/user context (hard-coded for now)
+    const start = new Date(data.startDate);
+    const end = new Date(data.endDate);
+    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const payload = {
+      emp_id: "EMP-001", // TODO: replace with logged-in user
       leave_type: data.leaveType,
-      start_date: new Date(data.startDate).toLocaleDateString(),
-      end_date: new Date(data.endDate).toLocaleDateString(),
-      days: Math.ceil((new Date(data.endDate).getTime() - new Date(data.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1,
+      start_date: start.toISOString().split("T")[0],
+      end_date: end.toISOString().split("T")[0],
+      days,
       reason: data.reason,
-      status: "Pending" as const,
-      submitted_at: new Date().toLocaleDateString()
+      status: "Pending",
     };
-    setRequests(prev => [newRequest, ...prev]);
-    setIsDialogOpen(false);
+    try {
+      const res = await fetch("/api/leaves", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      await loadLeaves();
+      setIsDialogOpen(false);
+    } catch (err) {
+      console.error("Create leave failed", err);
+      alert("Create leave failed");
+    }
   };
 
   const pendingRequests = requests.filter(r => r.status === "Pending");
   const approvedRequests = requests.filter(r => r.status === "Approved");
   const rejectedRequests = requests.filter(r => r.status === "Rejected");
+
+  // Map to table's expected shape
+  const toTableRows = (items: LeaveRecord[]) =>
+    items.map((r) => ({
+      id: String(r.id),
+      emp_id: r.emp_id,
+      emp_name: employees[r.emp_id]?.name || r.emp_id,
+      leave_type: r.leave_type,
+      start_date: r.start_date,
+      end_date: r.end_date,
+      days: r.days,
+      reason: r.reason,
+      status: r.status,
+      submitted_at: r.submitted_at,
+    }));
 
   return (
     <div className="space-y-6">
@@ -179,36 +208,36 @@ export default function Leaves() {
 
         <TabsContent value="all">
           <LeaveRequestsTable
-            requests={requests}
-            onApprove={handleApprove}
-            onReject={handleReject}
+            requests={toTableRows(requests)}
+            onApprove={(id) => handleApprove(parseInt(id, 10))}
+            onReject={(id) => handleReject(parseInt(id, 10))}
             onView={handleView}
           />
         </TabsContent>
 
         <TabsContent value="pending">
           <LeaveRequestsTable
-            requests={pendingRequests}
-            onApprove={handleApprove}
-            onReject={handleReject}
+            requests={toTableRows(pendingRequests)}
+            onApprove={(id) => handleApprove(parseInt(id, 10))}
+            onReject={(id) => handleReject(parseInt(id, 10))}
             onView={handleView}
           />
         </TabsContent>
 
         <TabsContent value="approved">
           <LeaveRequestsTable
-            requests={approvedRequests}
-            onApprove={handleApprove}
-            onReject={handleReject}
+            requests={toTableRows(approvedRequests)}
+            onApprove={(id) => handleApprove(parseInt(id, 10))}
+            onReject={(id) => handleReject(parseInt(id, 10))}
             onView={handleView}
           />
         </TabsContent>
 
         <TabsContent value="rejected">
           <LeaveRequestsTable
-            requests={rejectedRequests}
-            onApprove={handleApprove}
-            onReject={handleReject}
+            requests={toTableRows(rejectedRequests)}
+            onApprove={(id) => handleApprove(parseInt(id, 10))}
+            onReject={(id) => handleReject(parseInt(id, 10))}
             onView={handleView}
           />
         </TabsContent>
