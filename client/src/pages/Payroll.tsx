@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calculator } from "lucide-react";
-import { supabase } from "../../../shared/supabaseClient"; 
+// Supabase removed; using local REST API
 
 export default function Payroll() {
   const [months, setMonths] = useState<{ value: string; label: string }[]>([]);
@@ -21,29 +21,23 @@ export default function Payroll() {
   // Fetch distinct months from payroll on mount
 useEffect(() => {
   async function fetchMonths() {
-    const { data, error } = await supabase
-      .from("payroll")
-      .select("month");
-
-    if (error) {
-      console.error("Error fetching months:", error);
-      return;
-    }
-
-    if (data && data.length > 0) {
-      const uniqueMonths = Array.from(new Set(data.map(row => row.month)))
-        .map(monthStr => ({
-          value: monthStr,
-          label: formatMonthLabel(monthStr),
-        }))
-        .sort((a, b) => (a.value < b.value ? 1 : -1));
-
-      setMonths(uniqueMonths);
-      setSelectedMonth(uniqueMonths[0].value);
+    try {
+      const res = await fetch("/api/payroll", { credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      const all = await res.json();
+      if (Array.isArray(all) && all.length > 0) {
+        const uniqueMonths = Array.from(new Set(all.map((row: any) => row.month)))
+          .map((monthStr) => ({ value: monthStr, label: formatMonthLabel(monthStr) }))
+          .sort((a, b) => (a.value < b.value ? 1 : -1));
+        setMonths(uniqueMonths);
+        setSelectedMonth(uniqueMonths[0].value);
+      }
+    } catch (err) {
+      console.error("Error fetching months:", err);
     }
   }
 
-  fetchMonths(); // Correct: call the function ONCE on mount
+  fetchMonths();
 }, []);
 
 
@@ -64,26 +58,46 @@ useEffect(() => {
 
     async function fetchPayroll() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("payroll")
-        .select("*")
-        .eq("month", selectedMonth);
-
-      if (error) {
-        console.error("Error fetching payroll data:", error);
+      try {
+        const res = await fetch(`/api/payroll?month=${encodeURIComponent(selectedMonth)}`, {
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        setPayrollData(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Error fetching payroll data:", err);
         setPayrollData([]);
-      } else {
-        setPayrollData(data || []);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     fetchPayroll();
   }, [selectedMonth]);
 
   async function handleCalculate() {
-    // Your calculation logic here or trigger backend API
-    console.log("Calculate payroll for:", selectedMonth);
+    if (!selectedMonth) return;
+    try {
+      setLoading(true);
+      const res = await fetch("/api/payroll/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ month: selectedMonth }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const created = await res.json();
+      // Refresh list
+      const listRes = await fetch(`/api/payroll?month=${encodeURIComponent(selectedMonth)}`, {
+        credentials: "include",
+      });
+      setPayrollData(listRes.ok ? await listRes.json() : created || []);
+    } catch (err) {
+      console.error("Failed to generate payroll:", err);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSave(data: any[]) {

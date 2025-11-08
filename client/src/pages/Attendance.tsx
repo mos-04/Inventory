@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { supabase } from "../../../shared/supabaseClient";
+// Supabase removed; using local REST API
 import { apiRequest } from "@/lib/queryClient";
 
 export default function Attendance() {
@@ -17,14 +17,13 @@ export default function Attendance() {
 
   useEffect(() => {
     async function fetchMonths() {
-      const { data, error } = await supabase.from("attendance").select("month");
-      if (error) {
-        console.error("Failed to fetch months:", error);
-        return;
-      }
-      if (data) {
-        const uniqueMonths = Array.from(new Set(data.map((row) => row.month)))
-          .map((monthStr) => {
+      try {
+        const res = await fetch("/api/attendance", { credentials: "include" });
+        if (!res.ok) throw new Error(await res.text());
+        const all = await res.json();
+        const rawMonths: string[] = Array.from(new Set((all || []).map((row: any) => row.month).filter((m: any): m is string => typeof m === "string")));
+        const uniqueMonths = rawMonths
+          .map((monthStr: string) => {
             const [mm, yyyy] = monthStr.split("-");
             const monthNames = [
               "January",
@@ -44,9 +43,10 @@ export default function Attendance() {
             return { value: monthStr, label: `${monthNames[monthIndex]} ${yyyy}` };
           })
           .sort((a, b) => (a.value < b.value ? 1 : -1));
-
         setMonths(uniqueMonths);
-        setSelectedMonth(uniqueMonths[0]?.value || "");
+        setSelectedMonth(uniqueMonths.length ? uniqueMonths[0].value : "");
+      } catch (err) {
+        console.error("Failed to fetch months", err);
       }
     }
     fetchMonths();
