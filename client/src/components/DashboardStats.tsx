@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../../../shared/supabaseClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, DollarSign, TrendingUp, Calendar } from "lucide-react";
 
@@ -33,7 +32,7 @@ export default function DashboardStats() {
   const [stats, setStats] = useState({
     employees: 0,
     payroll: 0,
-    projects: 0,
+    departments: 0,
     attendanceRate: "0%",
   });
 
@@ -48,55 +47,50 @@ export default function DashboardStats() {
     async function fetchStats() {
       const currentMonth = getCurrentMonth();
 
-      // Fetch total employees count
-      const { count: employeesCount, error: empErr } = await supabase
-        .from("employees")
-        .select("*", { count: "exact", head: true });
-      if (empErr) console.error("Employees fetch error:", empErr);
+      try {
+        // Fetch all employees
+        const employeesRes = await fetch("/api/employees", { credentials: "include" });
+        const employees = employeesRes.ok ? await employeesRes.json() : [];
 
-      // Monthly payroll total (sum of net_salary for current month)
-      const { data: payrollData, error: payrollErr } = await supabase
-        .from("payroll")
-        .select("net_salary")
-        .eq("month", currentMonth);
-      if (payrollErr) console.error("Payroll fetch error:", payrollErr);
-      const payrollSum = payrollData
-        ? payrollData.reduce((sum, row) => sum + Number(row.net_salary || 0), 0)
-        : 0;
-
-      // Count active projects (distinct projects in employees table)
-      const { data: projectData, error: projectErr } = await supabase
-        .from("employees")
-        .select("project", { count: "exact", head: false });
-      if (projectErr) console.error("Projects fetch error:", projectErr);
-      const uniqueProjects = projectData
-        ? Array.from(new Set(projectData.map((row) => row.project))).length
-        : 0;
-
-      // Attendance rate: total present_days / total working_days aggregated for current month
-      const { data: attendanceData, error: attendanceErr } = await supabase
-        .from("attendance")
-        .select("present_days, working_days")
-        .eq("month", currentMonth);
-      if (attendanceErr) console.error("Attendance fetch error:", attendanceErr);
-
-      let totalPresent = 0;
-      let totalWorking = 0;
-      if (attendanceData) {
-        attendanceData.forEach(({ present_days, working_days }) => {
-          totalPresent += present_days ?? 0;
-          totalWorking += working_days ?? 0;
+        // Monthly payroll for current month
+        const payrollRes = await fetch(`/api/payroll?month=${encodeURIComponent(currentMonth)}`, {
+          credentials: "include",
         });
-      }
-      const attendanceRate =
-        totalWorking > 0 ? ((totalPresent / totalWorking) * 100).toFixed(1) + "%" : "0%";
+        const payrollData = payrollRes.ok ? await payrollRes.json() : [];
+        const payrollSum = payrollData.reduce(
+          (sum: number, row: any) => sum + Number(row.net_salary || 0),
+          0,
+        );
 
-      setStats({
-        employees: employeesCount || 0,
-        payroll: payrollSum,
-        projects: uniqueProjects,
-        attendanceRate,
-      });
+        // Distinct departments from employees (schema has department)
+        const departments = Array.from(
+          new Set((employees || []).map((e: any) => e.department).filter(Boolean)),
+        ).length;
+
+        // Attendance for current month to compute rate
+        const attendanceRes = await fetch(
+          `/api/attendance?month=${encodeURIComponent(currentMonth)}`,
+          { credentials: "include" },
+        );
+        const attendance = attendanceRes.ok ? await attendanceRes.json() : [];
+        let totalPresent = 0;
+        let totalWorking = 0;
+        (attendance || []).forEach((a: any) => {
+          totalPresent += Number(a.present_days || 0);
+          totalWorking += Number(a.working_days || 0);
+        });
+        const attendanceRate =
+          totalWorking > 0 ? ((totalPresent / totalWorking) * 100).toFixed(1) + "%" : "0%";
+
+        setStats({
+          employees: employees?.length || 0,
+          payroll: payrollSum,
+          departments,
+          attendanceRate,
+        });
+      } catch (err) {
+        console.error("Failed to load dashboard stats", err);
+      }
     }
 
     fetchStats();
@@ -117,8 +111,8 @@ export default function DashboardStats() {
         trend=""
       />
       <StatsCard
-        title="Active Projects"
-        value={stats.projects.toString()}
+        title="Departments"
+        value={stats.departments.toString()}
         icon={<TrendingUp className="h-4 w-4" />}
         trend=""
       />
