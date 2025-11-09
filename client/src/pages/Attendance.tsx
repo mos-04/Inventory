@@ -95,12 +95,20 @@ export default function Attendance() {
             <SelectValue placeholder="Select month" />
           </SelectTrigger>
           <SelectContent>
-            {months.map((month) => (
-              <SelectItem key={month.value} value={month.value}>
-                {month.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
+  {months.length === 0 ? (
+    <SelectItem value="no-data" disabled>
+      No months available
+    </SelectItem>
+  ) : (
+    months
+      .filter((month) => month.value && month.value.trim() !== "")
+      .map((month) => (
+        <SelectItem key={month.value} value={month.value}>
+          {month.label}
+        </SelectItem>
+      ))
+  )}
+</SelectContent>
         </Select>
       </div>
 
