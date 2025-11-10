@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertEmployeeSchema, insertAttendanceSchema, insertPayrollSchema, insertLeaveSchema, insertIndemnitySchema } from "@shared/schema";
 import { z } from "zod";
+import { error } from "console";
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -166,6 +167,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/attendance/bulk", async (req, res) => {
     try {
       const attendances = z.array(insertAttendanceSchema).parse(req.body);
+
+      const employees = await storage.getEmployees();
+      const validEmpIds = new Set(employees.map(e => e.emp_id));
+      
+      const InvalidEmpIds = attendances.filter(a => !validEmpIds.has(a.emp_id));
+
+      if(InvalidEmpIds.length >0){
+
+        const invalidIds = InvalidEmpIds.map(r => r.emp_id).join(", ");
+        return res.status(400).json({
+          error:"invalid employee IDs in attendance upload",
+          invalidIds,
+          message: `The following employee IDs are invalid: ${invalidIds}`
+        });
+
+      }
+
       const created = await storage.bulkCreateAttendance(attendances);
       res.json(created);
     } catch (error) {
