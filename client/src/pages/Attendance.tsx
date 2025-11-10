@@ -8,7 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// Supabase removed; using local REST API
 import { apiRequest } from "@/lib/queryClient";
 
 export default function Attendance() {
@@ -17,45 +16,43 @@ export default function Attendance() {
   const [uploaderKey, setUploaderKey] = useState(0);
 
   useEffect(() => {
-    async function fetchMonths() {
-      try {
-        const res = await fetch("/api/attendance", { credentials: "include" });
-        if (!res.ok) throw new Error(await res.text());
-        const all = await res.json();
-        const rawMonths: string[] = Array.from(new Set((all || []).map((row: any) => row.month).filter((m: any): m is string => typeof m === "string")));
-        const uniqueMonths = rawMonths
-          .map((monthStr: string) => {
-            const [mm, yyyy] = monthStr.split("-");
-            const monthNames = [
-              "January",
-              "February",
-              "March",
-              "April",
-              "May",
-              "June",
-              "July",
-              "August",
-              "September",
-              "October",
-              "November",
-              "December",
-            ];
-            const monthIndex = parseInt(mm) - 1;
-            return { value: monthStr, label: `${monthNames[monthIndex]} ${yyyy}` };
-          })
-          .sort((a, b) => (a.value < b.value ? 1 : -1));
-        setMonths(uniqueMonths);
-        setSelectedMonth(uniqueMonths.length ? uniqueMonths[0].value : "");
-      } catch (err) {
-        console.error("Failed to fetch months", err);
+    // Generate all months (e.g., last 12 months + next 6 months)
+    function generateMonths() {
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+      ];
+
+      const now = new Date();
+      const allMonths = [];
+
+      // Generate 12 months back + current month + 6 months forward = 19 months
+      for (let i = -12; i <= 6; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const mm = String(date.getMonth() + 1).padStart(2, "0");
+        const yyyy = date.getFullYear();
+        const value = `${mm}-${yyyy}`;
+        const label = `${monthNames[date.getMonth()]} ${yyyy}`;
+        allMonths.push({ value, label });
       }
+
+      // Sort by date (newest first)
+      allMonths.sort((a, b) => (a.value < b.value ? 1 : -1));
+
+      return allMonths;
     }
-    fetchMonths();
+
+    const generatedMonths = generateMonths();
+    setMonths(generatedMonths);
+    
+    // Set current month as default
+    const now = new Date();
+    const currentMonth = `${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`;
+    setSelectedMonth(currentMonth);
   }, []);
 
   const handleUpload = async (records: any[]) => {
     try {
-      // Map UI records to backend InsertAttendance payload
       const to2 = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
       const payload = records.map((r) => ({
         emp_id: r.emp_id,
@@ -95,20 +92,12 @@ export default function Attendance() {
             <SelectValue placeholder="Select month" />
           </SelectTrigger>
           <SelectContent>
-  {months.length === 0 ? (
-    <SelectItem value="no-data" disabled>
-      No months available
-    </SelectItem>
-  ) : (
-    months
-      .filter((month) => month.value && month.value.trim() !== "")
-      .map((month) => (
-        <SelectItem key={month.value} value={month.value}>
-          {month.label}
-        </SelectItem>
-      ))
-  )}
-</SelectContent>
+            {months.map((month) => (
+              <SelectItem key={month.value} value={month.value}>
+                {month.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
 

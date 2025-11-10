@@ -206,72 +206,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch payroll" });
     }
   });
-  
-  app.post("/api/payroll/generate", async (req, res) => {
-    try {
-      const { month } = req.body;
-      
-      if (!month) {
-        return res.status(400).json({ error: "Month is required" });
-      }
-      
-      const employees = await storage.getEmployees();
-      const attendances = await storage.getAttendance(month);
-      
-      const payrolls = [];
-      
-      for (const employee of employees) {
-        const empAttendance = attendances.find(a => a.emp_id === employee.emp_id);
-        
-        if (!empAttendance) {
-          continue;
-        }
-        
-        const basicSalary = parseFloat(employee.basic_salary);
-        const otRateNormal = parseFloat(employee.ot_rate_normal);
-        const otRateFriday = parseFloat(employee.ot_rate_friday);
-        const otRateHoliday = parseFloat(employee.ot_rate_holiday);
-        
-        const otHoursNormal = parseFloat(empAttendance.ot_hours_normal);
-        const otHoursFriday = parseFloat(empAttendance.ot_hours_friday);
-        const otHoursHoliday = parseFloat(empAttendance.ot_hours_holiday);
-        
-        const otAmount = 
-          (otHoursNormal * otRateNormal) +
-          (otHoursFriday * otRateFriday) +
-          (otHoursHoliday * otRateHoliday);
-        
-        let foodAllowance = 0;
-        if (employee.food_allowance_type === "per_day") {
-          foodAllowance = parseFloat(employee.food_allowance_amount) * empAttendance.present_days;
-        } else if (employee.food_allowance_type === "fixed") {
-          foodAllowance = parseFloat(employee.food_allowance_amount);
-        }
-        
-        const grossSalary = basicSalary + otAmount + foodAllowance;
-        const deductions = 0;
-        const netSalary = grossSalary - deductions;
-        
-        payrolls.push({
-          emp_id: employee.emp_id,
-          month,
-          basic_salary: basicSalary.toFixed(2),
-          ot_amount: otAmount.toFixed(2),
-          food_allowance: foodAllowance.toFixed(2),
-          gross_salary: grossSalary.toFixed(2),
-          deductions: deductions.toFixed(2),
-          net_salary: netSalary.toFixed(2),
-        });
-      }
-      
-      const created = await storage.bulkCreatePayroll(payrolls);
-      res.json(created);
-    } catch (error) {
-      console.error("Payroll generation error:", error);
-      res.status(500).json({ error: "Failed to generate payroll" });
+app.post("/api/payroll/generate", async (req, res) => {
+  try {
+    const { month } = req.body;
+    
+    if (!month) {
+      return res.status(400).json({ error: "Month is required" });
     }
-  });
-
+    
+    const employees = await storage.getEmployees();
+    const attendances = await storage.getAttendance(month);
+    const leaves = await storage.getLeaves("Approved");
+    
+    console.log(`Generating payroll for ${month}:`);
+    console.log(`- Found ${employees.length} employees`);
+    console.log(`- Found ${attendances.length} attendance records`);
+    
+    const payrolls = [];
+    
+    for (const employee of employees) {
+      const empAttendance = attendances.find(a => a.emp_id === employee.emp_id);
+      
+      if (!empAttendance) {
+        console.log(`Skipping ${employee.emp_id} - no attendance record`);
+        continue;
+      }
+      
+      const basicSalary = parseFloat(employee.basic_salary);
+      
+      // KUWAIT CALCULATION: Hourly rate = Monthly Salary ÷ 26 ÷ 8
+      const hourlyRate = basicSalary / 26 / 8;
+      
+      // Get OT hours from attendance (use correct field names)
+      const otHoursNormal = parseFloat(empAttendance.ot_hours_normal || "0");
+      const otHoursFriday = parseFloat(empAttendance.ot_hours_friday || "0");
+      const otHoursHoliday = parseFloat(empAttendance.ot_hours_holiday || "0");
+      
+      // KUWAIT RATES: 1.25x, 1.5x, 2.0x
+      const otAmountNormal = otHoursNormal * hourlyRate * 1.25;
+      const otAmountFriday = otHoursFriday * hourlyRate * 1.5;
+      const otAmountHoliday = otHoursHoliday * hourlyRate * 2.0;
+      const totalOtAmount = otAmountNormal + otAmountFriday + otAmountHoliday;
+      
+      // Food allowance: 25 KWD fixed, removed if approved leave
+      let foodAllowance = 25;
+      
+      const empLeaves = leaves.filter(l => 
+        l.emp_id === employee.emp_id && 
+        l.status === "Approved"
+      );
+      
+      if (empLeaves.length > 0) {
+        foodAllowance = 0; // Remove food allowance if leave exists
+      }
+      
+      const grossSalary = basicSalary + totalOtAmount + foodAllowance;
+      const deductions = 0;
+      const netSalary = grossSalary - deductions;
+      
+      console.log(`${employee.emp_id}: Basic=${basicSalary}, OT=${totalOtAmount.toFixed(2)}, Food=${foodAllowance}, Net=${netSalary.toFixed(2)}`);
+      
+      payrolls.push({
+        emp_id: employee.emp_id,
+        month,
+        basic_salary: basicSalary.toFixed(2),
+        ot_amount: totalOtAmount.toFixed(2),
+        food_allowance: foodAllowance.toFixed(2),
+        gross_salary: grossSalary.toFixed(2),
+        deductions: deductions.toFixed(2),
+        net_salary: netSalary.toFixed(2),
+      });
+    }
+    
+    console.log(`Generated ${payrolls.length} payroll records`);
+    
+    if (payrolls.length === 0) {
+      return res.json({ message: "No payroll generated - no employees with attendance found", created: [] });
+    }
+    
+    const created = await storage.bulkCreatePayroll(payrolls);
+    console.log(`Successfully saved ${created.length} payroll records`);
+    
+    res.json(created);
+  } catch (error) {
+    console.error("Payroll generation error:", error);
+    res.status(500).json({ error: "Failed to generate payroll", details: error instanceof Error ? error.message : String(error) });
+  }
+});
   // Mark indemnity as paid (simple status update)
   app.patch("/api/indemnity/:empId/pay", async (req, res) => {
     try {

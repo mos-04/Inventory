@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, DollarSign } from "lucide-react";
+import { Pencil, DollarSign, Download } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import * as XLSX from "xlsx";
 
 interface IndemnityRecord {
   emp_id: string;
@@ -36,16 +37,99 @@ export default function IndemnityTable({ records, onPay, onEdit }: IndemnityTabl
         return "default";
       case "Paid":
         return "secondary";
+      case "Pending":
+        return "outline";
       default:
         return "secondary";
     }
   };
 
+  const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+    switch (status) {
+      case "Active":
+        return "default";
+      case "Paid":
+        return "secondary";
+      case "Pending":
+        return "outline";
+      default:
+        return "secondary";
+    }
+  };
+
+  // Export to Excel
+  const handleExportExcel = () => {
+    if (!records || records.length === 0) {
+      alert("No indemnity data to export");
+      return;
+    }
+
+    const excelData = records.map((record) => ({
+      "Employee ID": record.emp_id,
+      "Name": record.emp_name,
+      "Designation": record.designation,
+      "Date of Joining": record.doj,
+      "Years of Service": record.years_of_service.toFixed(2),
+      "Basic Salary (KWD)": parseFloat(record.basic_salary.toString()).toFixed(2),
+      "Indemnity Amount (KWD)": parseFloat(record.indemnity_amount.toString()).toFixed(2),
+      "Status": record.status,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Indemnity");
+
+    // Set column widths
+    worksheet["!cols"] = [
+      { wch: 15 }, // Employee ID
+      { wch: 25 }, // Name
+      { wch: 20 }, // Designation
+      { wch: 15 }, // DOJ
+      { wch: 18 }, // Years of Service
+      { wch: 18 }, // Basic Salary
+      { wch: 20 }, // Indemnity Amount
+      { wch: 12 }, // Status
+    ];
+
+    const filename = `Indemnity_Report_${new Date().toISOString().split("T")[0]}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+  };
+
+  // Format currency as KWD
+  const formatKWD = (amount: number) => {
+    return amount.toLocaleString("en-US", {
+      style: "currency",
+      currency: "KWD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  // Format date nicely
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   return (
     <div className="space-y-4">
-      <div className="border rounded-lg overflow-hidden">
+      {/* Export Button */}
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={handleExportExcel} data-testid="button-export-indemnity">
+          <Download className="h-4 w-4 mr-2" />
+          Export to Excel
+        </Button>
+      </div>
+
+      <div className="border rounded-lg overflow-auto">
         <Table>
-          <TableHeader className="sticky top-0 bg-muted/50">
+          <TableHeader className="sticky top-0 bg-muted/50 z-10">
             <TableRow>
               <TableHead className="font-semibold">Emp ID</TableHead>
               <TableHead className="font-semibold">Name</TableHead>
@@ -59,48 +143,62 @@ export default function IndemnityTable({ records, onPay, onEdit }: IndemnityTabl
             </TableRow>
           </TableHeader>
           <TableBody>
-            {records.map((record) => (
-              <TableRow key={record.emp_id} className="hover-elevate" data-testid={`row-indemnity-${record.emp_id}`}>
-                <TableCell className="font-mono text-sm">{record.emp_id}</TableCell>
-                <TableCell className="font-medium">{record.emp_name}</TableCell>
-                <TableCell className="text-sm">{record.designation}</TableCell>
-                <TableCell className="text-sm">{record.doj}</TableCell>
-                <TableCell className="text-right font-mono text-sm">{record.years_of_service}</TableCell>
-                <TableCell className="text-right font-mono text-sm">
-                  ${record.basic_salary.toLocaleString()}
+            {records.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                  No indemnity records found
                 </TableCell>
-                <TableCell className="text-right font-mono text-sm font-semibold">
-                  ${record.indemnity_amount.toLocaleString()}
-                </TableCell>
-                <TableCell>
-                  <Badge variant={getStatusColor(record.status)}>
-                    {record.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => onEdit?.(record)}
-                      data-testid={`button-edit-indemnity-${record.emp_id}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    {record.status === "Active" && (
+              </TableRow>
+            ) : (
+              records.map((record) => (
+                <TableRow
+                  key={record.emp_id}
+                  className="hover-elevate"
+                  data-testid={`row-indemnity-${record.emp_id}`}
+                >
+                  <TableCell className="font-mono text-sm">{record.emp_id}</TableCell>
+                  <TableCell className="font-medium">{record.emp_name}</TableCell>
+                  <TableCell className="text-sm">{record.designation}</TableCell>
+                  <TableCell className="text-sm">{formatDate(record.doj)}</TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {record.years_of_service.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {formatKWD(record.basic_salary)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm font-semibold">
+                    {formatKWD(record.indemnity_amount)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusVariant(record.status)}>{record.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => onPay?.(record.emp_id)}
-                        data-testid={`button-pay-indemnity-${record.emp_id}`}
+                        onClick={() => onEdit?.(record)}
+                        data-testid={`button-edit-indemnity-${record.emp_id}`}
+                        title="Edit record"
                       >
-                        <DollarSign className="h-4 w-4 text-green-600" />
+                        <Pencil className="h-4 w-4" />
                       </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                      {record.status === "Active" && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => onPay?.(record.emp_id)}
+                          data-testid={`button-pay-indemnity-${record.emp_id}`}
+                          title="Mark as paid"
+                        >
+                          <DollarSign className="h-4 w-4 text-green-600" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

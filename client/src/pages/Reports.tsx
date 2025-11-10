@@ -10,65 +10,99 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, RefreshCw } from "lucide-react";
+import * as XLSX from "xlsx";
 
 export default function Reports() {
   const [selectedMonth, setSelectedMonth] = useState("");
   const [months, setMonths] = useState<{ value: string; label: string }[]>([]);
   const [format, setFormat] = useState("excel");
   const [selectedColumns, setSelectedColumns] = useState<string[]>([
-    "emp_id", "name", "designation", "salary", "worked_days", "normal_ot", "friday_ot", "holiday_ot", "total_earnings"
+    "emp_id",
+    "name",
+    "designation",
+    "salary",
+    "worked_days",
+    "normal_ot",
+    "friday_ot",
+    "holiday_ot",
+    "total_earnings",
   ]);
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Derive months from payroll table (single call)
+  // Generate months dynamically (same as other pages)
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch("/api/payroll", { credentials: "include" });
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        const rawMonths: string[] = Array.from(
-          new Set(
-            (data || [])
-              .map((p: any) => p.month)
-              .filter((m: any): m is string => typeof m === "string")
-          )
-        );
-        const uniqueMonths = rawMonths
-          .map((m: string) => {
-            const [mm, yyyy] = m.split("-");
-            const names = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-            return { value: m, label: `${names[parseInt(mm)-1]} ${yyyy}` };
-          })
-          .sort((a, b) => (a.value < b.value ? 1 : -1));
-        setMonths(uniqueMonths);
-        setSelectedMonth(uniqueMonths.length ? uniqueMonths[0].value : "");
-      } catch (err) {
-        console.error("Failed to load months", err);
+    function generateMonths() {
+      const monthNames = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+
+      const now = new Date();
+      const allMonths = [];
+
+      // Generate 12 months back + current + 6 forward
+      for (let i = -12; i <= 6; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const mm = String(date.getMonth() + 1).padStart(2, "0");
+        const yyyy = date.getFullYear();
+        const value = `${mm}-${yyyy}`;
+        const label = `${monthNames[date.getMonth()]} ${yyyy}`;
+        allMonths.push({ value, label });
       }
-    })();
+
+      allMonths.sort((a, b) => (a.value < b.value ? 1 : -1));
+      return allMonths;
+    }
+
+    const generatedMonths = generateMonths();
+    setMonths(generatedMonths);
+
+    // Set current month as default
+    const now = new Date();
+    const currentMonth = `${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`;
+    setSelectedMonth(currentMonth);
   }, []);
 
   // Load report rows whenever month changes
   useEffect(() => {
     if (!selectedMonth) return;
-    (async () => {
-      setLoading(true); setError(null);
+
+    async function loadReport() {
+      setLoading(true);
+      setError(null);
       try {
-        const res = await fetch(`/api/reports?month=${encodeURIComponent(selectedMonth)}`, { credentials: "include" });
-        if (!res.ok) throw new Error(await res.text());
+        const res = await fetch(`/api/reports?month=${encodeURIComponent(selectedMonth)}`, {
+          credentials: "include",
+        });
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(errorText || "Failed to load report");
+        }
         const data = await res.json();
         setRows(Array.isArray(data) ? data : []);
       } catch (err: any) {
+        console.error("Report load error:", err);
         setError(err.message || "Failed to load report");
         setRows([]);
       } finally {
         setLoading(false);
       }
-    })();
+    }
+
+    loadReport();
   }, [selectedMonth]);
 
   const availableColumns = [
@@ -78,50 +112,130 @@ export default function Reports() {
     { id: "department", label: "Department" },
     { id: "salary", label: "Basic Salary" },
     { id: "worked_days", label: "Worked Days" },
-    { id: "normal_ot", label: "Normal OT" },
-    { id: "friday_ot", label: "Friday OT" },
-    { id: "holiday_ot", label: "Holiday OT" },
+    { id: "working_days", label: "Working Days" },
+    { id: "normal_ot", label: "Normal OT Hours" },
+    { id: "friday_ot", label: "Friday OT Hours" },
+    { id: "holiday_ot", label: "Holiday OT Hours" },
     { id: "food_allow", label: "Food Allowance" },
     { id: "deductions", label: "Deductions" },
-    { id: "total_earnings", label: "Total Earnings" },
-    { id: "comments", label: "Comments" },
+    { id: "gross_salary", label: "Gross Salary" },
+    { id: "total_earnings", label: "Net Salary" },
   ];
 
   const toggleColumn = (columnId: string) => {
-    setSelectedColumns(prev =>
-      prev.includes(columnId)
-        ? prev.filter(id => id !== columnId)
-        : [...prev, columnId]
+    setSelectedColumns((prev) =>
+      prev.includes(columnId) ? prev.filter((id) => id !== columnId) : [...prev, columnId]
     );
   };
 
-  const handleDownload = () => {
-    const header = selectedColumns.join(",");
-    const csvLines = rows.map(r => selectedColumns.map(c => JSON.stringify(r[c] ?? "")).join(","));
-    const blob = new Blob([header + "\n" + csvLines.join("\n")], { type: "text/csv" });
+  const handleDownloadExcel = () => {
+    if (rows.length === 0) {
+      alert("No data to export");
+      return;
+    }
+
+    // Create column headers mapping
+    const columnMap: Record<string, string> = {};
+    availableColumns.forEach((col) => {
+      columnMap[col.id] = col.label;
+    });
+
+    // Prepare data with selected columns
+    const excelData = rows.map((row) => {
+      const filteredRow: Record<string, any> = {};
+      selectedColumns.forEach((colId) => {
+        const label = columnMap[colId] || colId;
+        let value = row[colId];
+
+        // Format numbers properly
+        if (
+          typeof value === "number" &&
+          ["salary", "food_allow", "deductions", "gross_salary", "total_earnings"].includes(colId)
+        ) {
+          value = parseFloat(value.toString()).toFixed(2);
+        }
+
+        filteredRow[label] = value ?? "";
+      });
+      return filteredRow;
+    });
+
+    // Create worksheet and workbook
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
+
+    // Auto-size columns
+    const maxWidths: number[] = [];
+    selectedColumns.forEach((colId, idx) => {
+      const label = columnMap[colId] || colId;
+      maxWidths[idx] = Math.max(label.length, 15);
+    });
+    worksheet["!cols"] = maxWidths.map((w) => ({ wch: w }));
+
+    // Generate filename
+    const filename = `Salary_Report_${selectedMonth}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+  };
+
+  const handleDownloadCSV = () => {
+    if (rows.length === 0) {
+      alert("No data to export");
+      return;
+    }
+
+    // Create column headers mapping
+    const columnMap: Record<string, string> = {};
+    availableColumns.forEach((col) => {
+      columnMap[col.id] = col.label;
+    });
+
+    // CSV header
+    const header = selectedColumns.map((colId) => columnMap[colId] || colId).join(",");
+
+    // CSV rows
+    const csvLines = rows.map((row) =>
+      selectedColumns
+        .map((colId) => {
+          let value = row[colId] ?? "";
+          // Escape commas and quotes in CSV
+          if (typeof value === "string" && (value.includes(",") || value.includes('"'))) {
+            value = `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        })
+        .join(",")
+    );
+
+    const csvContent = [header, ...csvLines].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `report-${selectedMonth}.csv`;
+    a.download = `Salary_Report_${selectedMonth}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleDownload = () => {
+    if (format === "excel") {
+      handleDownloadExcel();
+    } else {
+      handleDownloadCSV();
+    }
   };
 
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
         <h1 className="text-3xl font-semibold mb-2">Reports</h1>
-        <p className="text-muted-foreground">
-          Download salary sheets and payroll reports
-        </p>
+        <p className="text-muted-foreground">Download salary sheets and payroll reports</p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Monthly Salary Sheet</CardTitle>
-          <CardDescription>
-            Aggregated payroll and attendance for selected month
-          </CardDescription>
+          <CardDescription>Aggregated payroll and attendance for selected month</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -130,7 +244,11 @@ export default function Reports() {
                 Select Month
               </Label>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger id="report-month" className="h-10" data-testid="select-report-month">
+                <SelectTrigger
+                  id="report-month"
+                  className="h-10"
+                  data-testid="select-report-month"
+                >
                   <SelectValue placeholder="Select month" />
                 </SelectTrigger>
                 <SelectContent>
@@ -170,10 +288,7 @@ export default function Reports() {
                     onCheckedChange={() => toggleColumn(column.id)}
                     data-testid={`checkbox-${column.id}`}
                   />
-                  <Label
-                    htmlFor={column.id}
-                    className="text-sm font-normal cursor-pointer"
-                  >
+                  <Label htmlFor={column.id} className="text-sm font-normal cursor-pointer">
                     {column.label}
                   </Label>
                 </div>
@@ -184,12 +299,12 @@ export default function Reports() {
           <div className="flex gap-2">
             <Button
               onClick={handleDownload}
-              disabled={selectedColumns.length === 0}
+              disabled={selectedColumns.length === 0 || rows.length === 0 || loading}
               data-testid="button-download-report"
               className="flex-1"
             >
               <Download className="h-4 w-4 mr-2" />
-              Download Report
+              {loading ? "Loading..." : "Download Report"}
             </Button>
             {format === "excel" ? (
               <FileSpreadsheet className="h-10 w-10 text-muted-foreground" />
@@ -199,9 +314,24 @@ export default function Reports() {
           </div>
 
           <div className="mt-6 space-y-2">
-            {loading && <p>Loading report...</p>}
-            {error && <p className="text-destructive text-sm">{error}</p>}
-            {!loading && !error && rows.length === 0 && <p>No data for {selectedMonth}</p>}
+            {loading && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <p>Loading report data...</p>
+              </div>
+            )}
+            {error && <p className="text-destructive text-sm">Error: {error}</p>}
+            {!loading && !error && rows.length === 0 && (
+              <p className="text-muted-foreground">
+                No data available for {months.find((m) => m.value === selectedMonth)?.label}
+              </p>
+            )}
+            {!loading && !error && rows.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                Found {rows.length} employee record{rows.length !== 1 ? "s" : ""} for{" "}
+                {months.find((m) => m.value === selectedMonth)?.label}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
