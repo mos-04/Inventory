@@ -234,7 +234,7 @@ export default function Indemnity() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p>
-            <strong>First 5 years:</strong> 21 days of basic salary per year of service
+            <strong>First 5 years:</strong> 15 days of basic salary per year of service
           </p>
           <p>
             <strong>After 5 years:</strong> 30 days of basic salary per year of service
@@ -242,8 +242,8 @@ export default function Indemnity() {
           <p className="text-muted-foreground mt-4">
             <strong>Formula:</strong>
             <br />
-            • If service ≤ 5 years: (Basic Salary × 21 ÷ 30) × Years of Service
-            <br />• If service &gt; 5 years: [(Basic Salary × 21 ÷ 30) × 5] + [(Basic Salary × 30
+            • If service ≤ 5 years: (Basic Salary × 15 ÷ 30) × Years of Service
+            <br />• If service &gt; 5 years: [(Basic Salary × 15 ÷ 30) × 5] + [(Basic Salary × 30
             ÷ 30) × (Years - 5)]
           </p>
           <p className="text-muted-foreground">
