@@ -496,9 +496,9 @@ app.post("/api/payroll/generate", async (req, res) => {
         let indemnityAmount = 0;
         
         if (yearsOfService <= 5) {
-          indemnityAmount = (basicSalary * 21 / 30) * yearsOfService;
+          indemnityAmount = (basicSalary * 15 / 30) * yearsOfService;
         } else {
-          const firstFiveYears = (basicSalary * 21 / 30) * 5;
+          const firstFiveYears = (basicSalary * 15 / 30) * 5;
           const remainingYears = yearsOfService - 5;
           const afterFiveYears = (basicSalary * 30 / 30) * remainingYears;
           indemnityAmount = firstFiveYears + afterFiveYears;
