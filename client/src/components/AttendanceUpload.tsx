@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, CheckCircle2, AlertCircle } from "lucide-react";
@@ -20,7 +20,27 @@ interface AttendanceUploadProps {
 
 export default function AttendanceUpload({ selectedMonth, onUpload }: AttendanceUploadProps) {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [fileName, setFileName] = useState("");
+  const [fileName, setFileName] = useState("");   
+  const [employees, setEmployees] = useState<Set<string>>(new Set());
+
+
+
+  useEffect(() => {
+    async function loadEmployees() {
+      try{
+        const res = await fetch("/api/employees", {credentials: "include"});
+        if (res.ok) {
+          const data = await res.json();
+          setEmployees(new Set(data.map((e: any) => e.emp_id)));
+      }
+    }
+    catch (err){
+      console.error("Failed to load employees:", err);
+    }
+  }
+  loadEmployees();
+}
+  ,[]);
 
 
   // No DB writes here; editing and saving happens after preview.
@@ -31,8 +51,18 @@ export default function AttendanceUpload({ selectedMonth, onUpload }: Attendance
     if (!file) return;
     try {
       const { fileName: name, records } = await parseAttendanceFile(file);
+      // Validate records against existing employees
+      const validatedRecords = records.map((record) => {
+        if(!record.emp_id){
+          return { ...record, isValid: false, error: "Missing Emp ID" };
+        }
+        if (!employees.has(record.emp_id)) {
+          return {...record, isValid: false, error: "Emp ID not found" };
+        }
+        return { ...record, isValid: true };
+      });
       setFileName(name);
-      setRecords(records);
+      setRecords(validatedRecords);
     } catch (err) {
       alert((err as Error).message || "Failed to parse file");
     }

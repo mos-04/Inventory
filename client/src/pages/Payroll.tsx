@@ -96,6 +96,10 @@ export default function Payroll() {
       alert("Please select a month");
       return;
     }
+    else{
+      alert("Payroll calculation in progress. Please do not navigate away from the page.");
+    
+    }
 
     const confirmed = window.confirm(
       `Generate payroll for ${formatMonthLabel(selectedMonth)}? This will calculate salary based on attendance data.`
@@ -116,8 +120,19 @@ export default function Payroll() {
         throw new Error(error || "Failed to generate payroll");
       }
       
-      const created = await res.json();
-      alert(`Payroll generated successfully for ${created.length || 0} employees`);
+      const result = await res.json();
+      
+      // Show detailed message
+      let message = result.message || `Payroll generated successfully for ${result.count || 0} employees`;
+      
+      if (result.warnings && result.warnings.length > 0) {
+        const warningList = result.warnings
+          .map((w: any) => `- ${w.emp_id} (${w.name}): ${w.error}`)
+          .join('\n');
+        message += `\n\nWarnings:\n${warningList}`;
+      }
+      
+      alert(message);
       
       // Refresh payroll data
       const listRes = await fetch(`/api/payroll?month=${encodeURIComponent(selectedMonth)}`, {

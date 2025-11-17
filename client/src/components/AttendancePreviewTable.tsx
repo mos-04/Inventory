@@ -3,6 +3,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import type { AttendanceRecord } from "@/types/attendance";
 import { useMemo } from "react";
+import { object } from "zod";
 
 export type AttendancePreviewTableProps = {
   records: AttendanceRecord[];
@@ -10,25 +11,43 @@ export type AttendancePreviewTableProps = {
 };
 
 export function AttendancePreviewTable({ records, onChange }: AttendancePreviewTableProps) {
-  const { validCount, errorCount } = useMemo(() => {
+  const { validCount, errorCount, errors } = useMemo(() => {
     const v = records.filter((r) => r.isValid).length;
     const e = records.length - v;
-    return { validCount: v, errorCount: e };
+    const errorTypes: Record<string, number> = {};
+
+    records.forEach(r => {
+      if(!r.isValid && r.error){
+        errorTypes[r.error] = (errorTypes[r.error] || 0) + 1;
+      }
+    });
+    return { validCount: v, errorCount: e , errors: errorTypes};
   }, [records]);
 
   return (
     <div className="space-y-4">
       {records.length > 0 && (
         <Alert>
-          <AlertDescription className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <span className="font-medium">{validCount} valid records</span>
-            {errorCount > 0 && (
-              <>
-                <AlertCircle className="h-4 w-4 text-destructive ml-4" />
-                <span className="font-medium text-destructive">{errorCount} errors found</span>
-              </>
-            )}
+          <AlertDescription className="space-y-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <span className="font-medium">{validCount} valid records</span>
+              {errorCount > 0 && (
+                <>
+                  <AlertCircle className="h-4 w-4 text-destructive ml-4" />
+                  <span className="font-medium text-destructive">{errorCount} errors found</span>
+                </>
+              )}
+            </div>
+            {
+              errorCount > 0 && (
+                <div className="text-sm text-muted-foreground ml-6">
+                  {Object.entries(errors).map(([error, count]) => (
+                    <div key={error}>• {error}: {count} record(s)</div>
+                  ))}             
+                </div>
+                )
+            }
           </AlertDescription>
         </Alert>
       )}

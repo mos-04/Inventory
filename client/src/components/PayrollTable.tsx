@@ -16,13 +16,13 @@ interface PayrollRow {
   id?: number;
   emp_id: string;
   month?: string;
-  basic_salary: number;
-  ot_amount: number;
-  food_allowance: number;
-  gross_salary: number;
-  deductions: number;
-  net_salary: number;
-  generated_at?: string;
+  basic_salary: string | number;
+  ot_amount: string | number;
+  food_allowance: string | number;
+  gross_salary: string | number;
+  deductions: string | number;
+  net_salary: string | number;
+  generated_at?: string | Date;
   comment?: string;
 }
 
@@ -90,7 +90,7 @@ export default function PayrollTable({ data, onSave, onApprove }: PayrollTablePr
                 <TableCell>
                   <Input
                     type="number"
-                    value={row.basic_salary ?? 0}
+                    value={Number(row.basic_salary ?? 0)}
                     onChange={(e) => updateCell(rowIndex, "basic_salary", Number(e.target.value))}
                     className="w-32"
                   />
@@ -98,7 +98,7 @@ export default function PayrollTable({ data, onSave, onApprove }: PayrollTablePr
                 <TableCell>
                   <Input
                     type="number"
-                    value={row.ot_amount ?? 0}
+                    value={Number(row.ot_amount ?? 0)}
                     onChange={(e) => updateCell(rowIndex, "ot_amount", Number(e.target.value))}
                     className="w-32"
                   />
@@ -106,21 +106,21 @@ export default function PayrollTable({ data, onSave, onApprove }: PayrollTablePr
                 <TableCell>
                   <Input
                     type="number"
-                    value={row.food_allowance ?? 0}
+                    value={Number(row.food_allowance ?? 0)}
                     onChange={(e) => updateCell(rowIndex, "food_allowance", Number(e.target.value))}
                     className="w-32"
                   />
                 </TableCell>
-                <TableCell className="font-mono text-right">{(row.gross_salary ?? 0).toFixed(2)}</TableCell>
+                <TableCell className="font-mono text-right">{Number(row.gross_salary ?? 0).toFixed(2)}</TableCell>
                 <TableCell>
                   <Input
                     type="number"
-                    value={row.deductions ?? 0}
+                    value={Number(row.deductions ?? 0)}
                     onChange={(e) => updateCell(rowIndex, "deductions", Number(e.target.value))}
                     className="w-32"
                   />
                 </TableCell>
-                <TableCell className="font-mono text-right font-semibold">{(row.net_salary ?? 0).toFixed(2)}</TableCell>
+                <TableCell className="font-mono text-right font-semibold">{Number(row.net_salary ?? 0).toFixed(2)}</TableCell>
                 <TableCell>
                   {editingCell?.rowIndex === rowIndex && editingCell.field === "comment" ? (
                     <Textarea
