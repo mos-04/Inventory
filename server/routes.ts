@@ -224,6 +224,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch payroll" });
     }
   });
+
+  app.patch("/api/payroll/:empId", async (req, res) => {
+    try {
+      const { month, ...updates } = req.body;
+      if (!month) {
+        return res.status(400).json({ error: "Month is required" });
+      }
+      
+      const payroll = await storage.updatePayroll(req.params.empId, month, updates);
+      if (!payroll) {
+        return res.status(404).json({ error: "Payroll record not found" });
+      }
+      res.json(payroll);
+    } catch (error) {
+      console.error("Update payroll error:", error);
+      res.status(500).json({ error: "Failed to update payroll" });
+    }
+  });
+
 app.post("/api/payroll/generate", async (req, res) => {
   try {
     const { month } = req.body;
@@ -302,7 +321,7 @@ app.post("/api/payroll/generate", async (req, res) => {
       }
       
       // Parse employee salary data
-      const basicSalary = parseFloat(employee.basic_salary); // Full basic salary, not prorated
+      const monthlyBasicSalary = parseFloat(employee.basic_salary); // Full monthly contract salary
       const otRateNormal = parseFloat(employee.ot_rate_normal || "0");
       const otRateFriday = parseFloat(employee.ot_rate_friday || "0");
       const otRateHoliday = parseFloat(employee.ot_rate_holiday || "0");
@@ -311,8 +330,12 @@ app.post("/api/payroll/generate", async (req, res) => {
       // CONSTANTS: Standard payroll calculation
       const HOURS_PER_MONTH = 260; // 26 working days × 10 hours/day
       
-      // Calculate Hourly Basic Salary (HBS)
-      const hourlyBasicSalary = basicSalary / HOURS_PER_MONTH;
+      // Calculate Hourly Basic Salary (HBS) for OT rates (based on contract salary)
+      const hourlyBasicSalary = monthlyBasicSalary / HOURS_PER_MONTH;
+
+      // Calculate Prorated Basic Salary (Payable Basic) based on attendance
+      // Formula: (Monthly Salary / Total Working Days) * Present Days
+      const payableBasicSalary = (monthlyBasicSalary / workingDays) * presentDays;
       
       // OT hours are already aggregated above (from all attendance records for the month)
       
@@ -377,8 +400,8 @@ app.post("/api/payroll/generate", async (req, res) => {
         }
       }
       
-      // Calculate Gross Salary: Basic Salary + Total OT Pay + Food Allowance
-      const grossSalary = basicSalary + totalOtPay + foodAllowance;
+      // Calculate Gross Salary: Payable Basic + Total OT Pay + Food Allowance
+      const grossSalary = payableBasicSalary + totalOtPay + foodAllowance;
       
       // Deductions (can be extended in the future)
       const deductions = 0;
@@ -389,7 +412,8 @@ app.post("/api/payroll/generate", async (req, res) => {
       // Detailed logging
       console.log(`\n${employee.emp_id} (${employee.name}):`);
       console.log(`  Month: ${month} | Attendance Records: ${empAttendances.length}`);
-      console.log(`  Basic Salary: ${basicSalary.toFixed(3)} KWD`);
+      console.log(`  Contract Basic Salary: ${monthlyBasicSalary.toFixed(3)} KWD`);
+      console.log(`  Payable Basic Salary (Prorated): ${payableBasicSalary.toFixed(3)} KWD`);
       console.log(`  Hourly Basic Salary (HBS): ${hourlyBasicSalary.toFixed(3)} KWD/hour`);
       console.log(`  Aggregated Attendance - Working: ${workingDays}, Present: ${presentDays}, Absent: ${absentDays} days`);
       console.log(`  Aggregated OT Hours - Normal: ${otHoursNormal.toFixed(2)}h, Friday: ${otHoursFriday.toFixed(2)}h, Holiday: ${otHoursHoliday.toFixed(2)}h`);
@@ -404,7 +428,7 @@ app.post("/api/payroll/generate", async (req, res) => {
       payrolls.push({
         emp_id: employee.emp_id,
         month,
-        basic_salary: basicSalary.toFixed(2),
+        basic_salary: payableBasicSalary.toFixed(2),
         ot_amount: totalOtPay.toFixed(2),
         food_allowance: foodAllowance.toFixed(2),
         gross_salary: grossSalary.toFixed(2),
@@ -424,6 +448,10 @@ app.post("/api/payroll/generate", async (req, res) => {
       });
     }
     
+    // Clear existing payroll for this month to avoid duplicates/stale data
+    await storage.deletePayroll(month);
+    console.log(`Cleared existing payroll records for ${month}`);
+
     const created = await storage.bulkCreatePayroll(payrolls);
     console.log(`Successfully saved ${created.length} payroll records`);
     

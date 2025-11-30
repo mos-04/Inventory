@@ -113,6 +113,19 @@ export class DrizzleStorage implements IStorage {
     return rows;
   }
 
+  async updatePayroll(empId: string, month: string, updates: Partial<InsertPayroll>): Promise<Payroll | undefined> {
+    const rows = await this.db
+      .update(payrollTable)
+      .set(updates)
+      .where(and(eq(payrollTable.emp_id, empId), eq(payrollTable.month, month)))
+      .returning();
+    return rows[0];
+  }
+
+  async deletePayroll(month: string): Promise<void> {
+    await this.db.delete(payrollTable).where(eq(payrollTable.month, month));
+  }
+
   async getLeaves(status?: string): Promise<Leave[]> {
     if (status) return await this.db.select().from(leavesTable).where(eq(leavesTable.status, status));
     return await this.db.select().from(leavesTable);

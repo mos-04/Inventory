@@ -37,6 +37,8 @@ export interface IStorage {
   getPayrollByEmployee(empId: string, month?: string): Promise<Payroll[]>;
   createPayroll(payroll: InsertPayroll): Promise<Payroll>;
   bulkCreatePayroll(payrolls: InsertPayroll[]): Promise<Payroll[]>;
+  updatePayroll(empId: string, month: string, payroll: Partial<InsertPayroll>): Promise<Payroll | undefined>;
+  deletePayroll(month: string): Promise<void>;
 
   // Leaves
   getLeaves(status?: string): Promise<Leave[]>;
