@@ -1,6 +1,7 @@
 export interface AttendanceRecord {
   emp_id: string;
   worked_days: number;
+  total_working_days?: number;
   normal_ot: number;
   friday_ot: number;
   holiday_ot: number;

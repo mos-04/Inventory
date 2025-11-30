@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil } from "lucide-react";
+import { Pencil, Download } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -57,10 +57,6 @@ export default function PayrollTable({ data, onSave, onApprove }: PayrollTablePr
 
       return newData;
     });
-  };
-
-  const handleSave = () => {
-    onSave?.(payrollData);
   };
 
   const handleApprove = () => {
@@ -147,8 +143,10 @@ export default function PayrollTable({ data, onSave, onApprove }: PayrollTablePr
       </div>
 
       <div className="flex justify-end gap-2 pt-4 border-t">
-        <Button variant="outline" onClick={handleSave} data-testid="button-save-draft">Save Draft</Button>
-        <Button onClick={handleApprove} data-testid="button-approve-payroll">Approve & Generate Sheet</Button>
+        <Button onClick={handleApprove} data-testid="button-approve-payroll">
+          <Download className="h-4 w-4 mr-2" />
+          Download File
+        </Button>
       </div>
     </div>
   );

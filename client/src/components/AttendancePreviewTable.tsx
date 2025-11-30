@@ -57,6 +57,7 @@ export function AttendancePreviewTable({ records, onChange }: AttendancePreviewT
           <TableHeader className="sticky top-0 bg-muted/50">
             <TableRow>
               <TableHead className="font-semibold">Emp ID</TableHead>
+              <TableHead className="font-semibold text-right">Total Working Days</TableHead>
               <TableHead className="font-semibold text-right">Worked Days</TableHead>
               <TableHead className="font-semibold text-right">Normal OT</TableHead>
               <TableHead className="font-semibold text-right">Friday OT</TableHead>
@@ -78,6 +79,14 @@ export function AttendancePreviewTable({ records, onChange }: AttendancePreviewT
                     className="w-28 bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
                     value={record.emp_id}
                     onChange={(e) => onChange(index, { emp_id: e.target.value.trim(), isValid: Boolean(e.target.value.trim()) })}
+                  />
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm">
+                  <input
+                    type="number"
+                    className="w-16 text-right bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
+                    value={record.total_working_days ?? 30}
+                    onChange={(e) => onChange(index, { total_working_days: Number(e.target.value || 0) })}
                   />
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm">

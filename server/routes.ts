@@ -251,71 +251,107 @@ app.post("/api/payroll/generate", async (req, res) => {
         continue;
       }
       
-      const empAttendance = attendances.find(a => a.emp_id === employee.emp_id);
+      // Get all attendance records for this employee in the selected month
+      const empAttendances = attendances.filter(a => a.emp_id === employee.emp_id && a.month === month);
       
-      if (!empAttendance) {
-        console.log(`Warning: No attendance record for ${employee.emp_id} (${employee.name})`);
+      if (empAttendances.length === 0) {
+        console.log(`Warning: No attendance record for ${employee.emp_id} (${employee.name}) in ${month}`);
         errors.push({
           emp_id: employee.emp_id,
           name: employee.name,
-          error: "No attendance data"
+          error: "No attendance data for selected month"
+        });
+        continue;
+      }
+      
+      // Aggregate attendance data for the month (sum all records)
+      const workingDays = empAttendances.reduce((sum, att) => 
+        sum + (parseInt(att.working_days.toString()) || 0), 0);
+      const presentDays = empAttendances.reduce((sum, att) => 
+        sum + (parseInt(att.present_days.toString()) || 0), 0);
+      const absentDays = empAttendances.reduce((sum, att) => 
+        sum + (parseInt(att.absent_days.toString()) || 0), 0);
+      const otHoursNormal = empAttendances.reduce((sum, att) => 
+        sum + (parseFloat(att.ot_hours_normal || "0")), 0);
+      const otHoursFriday = empAttendances.reduce((sum, att) => 
+        sum + (parseFloat(att.ot_hours_friday || "0")), 0);
+      const otHoursHoliday = empAttendances.reduce((sum, att) => 
+        sum + (parseFloat(att.ot_hours_holiday || "0")), 0);
+      
+      console.log(`${employee.emp_id}: Aggregated ${empAttendances.length} attendance record(s) for ${month}`);
+      
+      // Validation: Skip employees with zero working days or zero present days
+      if (workingDays === 0) {
+        console.log(`Warning: Skipping ${employee.emp_id} (${employee.name}) - Zero working days`);
+        errors.push({
+          emp_id: employee.emp_id,
+          name: employee.name,
+          error: "Zero working days in attendance"
+        });
+        continue;
+      }
+      
+      if (presentDays === 0) {
+        console.log(`Warning: Skipping ${employee.emp_id} (${employee.name}) - Zero present days`);
+        errors.push({
+          emp_id: employee.emp_id,
+          name: employee.name,
+          error: "Zero present days (no work performed)"
         });
         continue;
       }
       
       // Parse employee salary data
-      const monthlyBasicSalary = parseFloat(employee.basic_salary);
+      const basicSalary = parseFloat(employee.basic_salary); // Full basic salary, not prorated
       const otRateNormal = parseFloat(employee.ot_rate_normal || "0");
       const otRateFriday = parseFloat(employee.ot_rate_friday || "0");
       const otRateHoliday = parseFloat(employee.ot_rate_holiday || "0");
       const foodAllowanceAmount = parseFloat(employee.food_allowance_amount || "0");
       
-      // Get attendance data
-      const workingDays = parseInt(empAttendance.working_days.toString()) || 26;
-      const presentDays = parseInt(empAttendance.present_days.toString()) || 0;
-      const absentDays = parseInt(empAttendance.absent_days.toString()) || 0;
+      // CONSTANTS: Standard payroll calculation
+      const HOURS_PER_MONTH = 260; // 26 working days × 10 hours/day
       
-      // Calculate daily rate based on actual working days in the month
-      const dailyRate = monthlyBasicSalary / workingDays;
+      // Calculate Hourly Basic Salary (HBS)
+      const hourlyBasicSalary = basicSalary / HOURS_PER_MONTH;
       
-      // Calculate basic salary based on present days (proportional to days worked)
-      const basicSalary = presentDays * dailyRate;
+      // OT hours are already aggregated above (from all attendance records for the month)
       
-      // Get OT hours from attendance
-      const otHoursNormal = parseFloat(empAttendance.ot_hours_normal || "0");
-      const otHoursFriday = parseFloat(empAttendance.ot_hours_friday || "0");
-      const otHoursHoliday = parseFloat(empAttendance.ot_hours_holiday || "0");
+      // OT MULTIPLIERS (Standard)
+      const NORMAL_OT_MULTIPLIER = 1.25;
+      const FRIDAY_OT_MULTIPLIER = 1.50;
+      const HOLIDAY_OT_MULTIPLIER = 2.00;
       
-      // Calculate OT amount using employee's specific OT rates
-      // If employee has custom rates, use them; otherwise calculate standard rates
-      let otAmountNormal = 0;
-      let otAmountFriday = 0;
-      let otAmountHoliday = 0;
+      // Calculate OT Rates
+      // If employee has custom rates per hour, use them; otherwise calculate from HBS
+      let normalOtRate = 0;
+      let fridayOtRate = 0;
+      let holidayOtRate = 0;
       
       if (otRateNormal > 0) {
-        // Employee has custom OT rate
-        otAmountNormal = otHoursNormal * otRateNormal;
+        // Employee has custom OT rate per hour
+        normalOtRate = otRateNormal;
       } else {
-        // Calculate standard rate: (Basic Salary / 26 / 8) * 1.25
-        const hourlyRate = basicSalary / 26 / 8;
-        otAmountNormal = otHoursNormal * hourlyRate * 1.25;
+        // Calculate: HBS × Multiplier
+        normalOtRate = hourlyBasicSalary * NORMAL_OT_MULTIPLIER;
       }
       
       if (otRateFriday > 0) {
-        otAmountFriday = otHoursFriday * otRateFriday;
+        fridayOtRate = otRateFriday;
       } else {
-        const hourlyRate = basicSalary / 26 / 8;
-        otAmountFriday = otHoursFriday * hourlyRate * 1.5;
+        fridayOtRate = hourlyBasicSalary * FRIDAY_OT_MULTIPLIER;
       }
       
       if (otRateHoliday > 0) {
-        otAmountHoliday = otHoursHoliday * otRateHoliday;
+        holidayOtRate = otRateHoliday;
       } else {
-        const hourlyRate = basicSalary / 26 / 8;
-        otAmountHoliday = otHoursHoliday * hourlyRate * 2.0;
+        holidayOtRate = hourlyBasicSalary * HOLIDAY_OT_MULTIPLIER;
       }
       
-      const totalOtAmount = otAmountNormal + otAmountFriday + otAmountHoliday;
+      // Calculate OT Pay: Hours × Rate
+      const normalOtPay = otHoursNormal * normalOtRate;
+      const fridayOtPay = otHoursFriday * fridayOtRate;
+      const holidayOtPay = otHoursHoliday * holidayOtRate;
+      const totalOtPay = normalOtPay + fridayOtPay + holidayOtPay;
       
       // Calculate food allowance based on employee settings
       let foodAllowance = 0;
@@ -333,7 +369,7 @@ app.post("/api/payroll/generate", async (req, res) => {
           if (employee.food_allowance_type === "fixed") {
             foodAllowance = foodAllowanceAmount;
           } else if (employee.food_allowance_type === "per_day") {
-            const presentDays = parseInt(empAttendance.present_days.toString()) || 0;
+            // Use aggregated present days
             foodAllowance = presentDays * foodAllowanceAmount;
           }
         } else {
@@ -341,25 +377,35 @@ app.post("/api/payroll/generate", async (req, res) => {
         }
       }
       
-      // Calculate gross salary (no deductions - salary is already proportional to days worked)
-      const grossSalary = basicSalary + totalOtAmount + foodAllowance;
-      const deductions = 0; // No deductions needed since salary is based on present days
+      // Calculate Gross Salary: Basic Salary + Total OT Pay + Food Allowance
+      const grossSalary = basicSalary + totalOtPay + foodAllowance;
+      
+      // Deductions (can be extended in the future)
+      const deductions = 0;
+      
+      // Calculate Net Salary: Gross Salary - Deductions
       const netSalary = grossSalary - deductions;
       
-      console.log(`${employee.emp_id} (${employee.name}):`);
-      console.log(`  Monthly Base: ${monthlyBasicSalary.toFixed(2)} KWD`);
-      console.log(`  Working Days: ${workingDays}, Present: ${presentDays}, Absent: ${absentDays}`);
-      console.log(`  Daily Rate: ${dailyRate.toFixed(3)} KWD`);
-      console.log(`  Basic (${presentDays} days): ${basicSalary.toFixed(2)} KWD`);
-      console.log(`  OT: ${totalOtAmount.toFixed(2)} KWD (N:${otHoursNormal}h, F:${otHoursFriday}h, H:${otHoursHoliday}h)`);
-      console.log(`  Food: ${foodAllowance.toFixed(2)} KWD`);
-      console.log(`  Net: ${netSalary.toFixed(2)} KWD`);
+      // Detailed logging
+      console.log(`\n${employee.emp_id} (${employee.name}):`);
+      console.log(`  Month: ${month} | Attendance Records: ${empAttendances.length}`);
+      console.log(`  Basic Salary: ${basicSalary.toFixed(3)} KWD`);
+      console.log(`  Hourly Basic Salary (HBS): ${hourlyBasicSalary.toFixed(3)} KWD/hour`);
+      console.log(`  Aggregated Attendance - Working: ${workingDays}, Present: ${presentDays}, Absent: ${absentDays} days`);
+      console.log(`  Aggregated OT Hours - Normal: ${otHoursNormal.toFixed(2)}h, Friday: ${otHoursFriday.toFixed(2)}h, Holiday: ${otHoursHoliday.toFixed(2)}h`);
+      console.log(`  OT Rates - Normal: ${normalOtRate.toFixed(3)}, Friday: ${fridayOtRate.toFixed(3)}, Holiday: ${holidayOtRate.toFixed(3)} KWD/hour`);
+      console.log(`  OT Pay - Normal: ${normalOtPay.toFixed(3)}, Friday: ${fridayOtPay.toFixed(3)}, Holiday: ${holidayOtPay.toFixed(3)} KWD`);
+      console.log(`  Total OT Pay: ${totalOtPay.toFixed(3)} KWD`);
+      console.log(`  Food Allowance: ${foodAllowance.toFixed(3)} KWD`);
+      console.log(`  Gross Salary: ${grossSalary.toFixed(3)} KWD`);
+      console.log(`  Deductions: ${deductions.toFixed(3)} KWD`);
+      console.log(`  Net Salary: ${netSalary.toFixed(3)} KWD`);
       
       payrolls.push({
         emp_id: employee.emp_id,
         month,
         basic_salary: basicSalary.toFixed(2),
-        ot_amount: totalOtAmount.toFixed(2),
+        ot_amount: totalOtPay.toFixed(2),
         food_allowance: foodAllowance.toFixed(2),
         gross_salary: grossSalary.toFixed(2),
         deductions: deductions.toFixed(2),

@@ -8,54 +8,60 @@
 import type { Employee, Attendance, Leave } from "@shared/schema";
 
 /**
- * Kuwait standard working days per month
+ * Standard payroll calculation constants based on Kuwait labor law
  */
+export const HOURS_PER_MONTH = 260; // 26 working days × 10 hours/day
 export const KUWAIT_WORKING_DAYS_PER_MONTH = 26;
-
-/**
- * Kuwait standard working hours per day
- */
-export const KUWAIT_WORKING_HOURS_PER_DAY = 8;
+export const KUWAIT_WORKING_HOURS_PER_DAY = 10;
 
 /**
  * Standard OT multipliers for Kuwait
  */
 export const OT_MULTIPLIERS = {
   normal: 1.25,    // Normal weekday OT
-  friday: 1.5,     // Friday OT
-  holiday: 2.0,    // Public holiday OT
+  friday: 1.50,    // Friday OT
+  holiday: 2.00,   // Public holiday OT
 };
 
 /**
- * Calculate daily rate from monthly salary
+ * Calculate Hourly Basic Salary (HBS)
+ * Formula: HBS = Basic Salary ÷ Hours Per Month (208)
+ */
+export function calculateHourlyBasicSalary(basicSalary: number): number {
+  return basicSalary / HOURS_PER_MONTH;
+}
+
+/**
+ * Calculate daily rate from monthly salary (for reference/reporting)
  */
 export function calculateDailyRate(monthlySalary: number): number {
   return monthlySalary / KUWAIT_WORKING_DAYS_PER_MONTH;
 }
 
 /**
- * Calculate hourly rate from monthly salary
- */
-export function calculateHourlyRate(monthlySalary: number): number {
-  return monthlySalary / KUWAIT_WORKING_DAYS_PER_MONTH / KUWAIT_WORKING_HOURS_PER_DAY;
-}
-
-/**
- * Calculate OT amount for an employee
+ * Calculate OT rates and amounts for an employee
+ * Returns rates (KWD/hour) and pay (KWD) for each OT type
  */
 export function calculateOvertimeAmount(
   employee: Employee,
   attendance: Attendance
 ): {
-  normal: number;
-  friday: number;
-  holiday: number;
-  total: number;
+  rates: {
+    normal: number;
+    friday: number;
+    holiday: number;
+  };
+  pay: {
+    normal: number;
+    friday: number;
+    holiday: number;
+    total: number;
+  };
 } {
   const basicSalary = parseFloat(employee.basic_salary);
-  const standardHourlyRate = calculateHourlyRate(basicSalary);
+  const hourlyBasicSalary = calculateHourlyBasicSalary(basicSalary);
   
-  // Get employee's custom OT rates if available
+  // Get employee's custom OT rates if available (these are per-hour rates)
   const customOtRateNormal = parseFloat(employee.ot_rate_normal || "0");
   const customOtRateFriday = parseFloat(employee.ot_rate_friday || "0");
   const customOtRateHoliday = parseFloat(employee.ot_rate_holiday || "0");
@@ -65,24 +71,36 @@ export function calculateOvertimeAmount(
   const otHoursFriday = parseFloat(attendance.ot_hours_friday || "0");
   const otHoursHoliday = parseFloat(attendance.ot_hours_holiday || "0");
   
-  // Calculate OT amounts (use custom rate if set, otherwise use standard calculation)
-  const normalAmount = otHoursNormal * (customOtRateNormal > 0 
+  // Calculate OT Rates: HBS × Multiplier (or use custom rate)
+  const normalOtRate = customOtRateNormal > 0 
     ? customOtRateNormal 
-    : standardHourlyRate * OT_MULTIPLIERS.normal);
+    : hourlyBasicSalary * OT_MULTIPLIERS.normal;
     
-  const fridayAmount = otHoursFriday * (customOtRateFriday > 0 
+  const fridayOtRate = customOtRateFriday > 0 
     ? customOtRateFriday 
-    : standardHourlyRate * OT_MULTIPLIERS.friday);
+    : hourlyBasicSalary * OT_MULTIPLIERS.friday;
     
-  const holidayAmount = otHoursHoliday * (customOtRateHoliday > 0 
+  const holidayOtRate = customOtRateHoliday > 0 
     ? customOtRateHoliday 
-    : standardHourlyRate * OT_MULTIPLIERS.holiday);
+    : hourlyBasicSalary * OT_MULTIPLIERS.holiday;
+  
+  // Calculate OT Pay: Hours × Rate
+  const normalPay = otHoursNormal * normalOtRate;
+  const fridayPay = otHoursFriday * fridayOtRate;
+  const holidayPay = otHoursHoliday * holidayOtRate;
   
   return {
-    normal: normalAmount,
-    friday: fridayAmount,
-    holiday: holidayAmount,
-    total: normalAmount + fridayAmount + holidayAmount,
+    rates: {
+      normal: normalOtRate,
+      friday: fridayOtRate,
+      holiday: holidayOtRate,
+    },
+    pay: {
+      normal: normalPay,
+      friday: fridayPay,
+      holiday: holidayPay,
+      total: normalPay + fridayPay + holidayPay,
+    },
   };
 }
 
@@ -122,22 +140,17 @@ export function calculateFoodAllowance(
 }
 
 /**
- * Calculate basic salary based on present days (proportional calculation)
+ * Get basic salary (full monthly salary, not prorated)
+ * Based on the specification: Basic Salary is treated as the base and not prorated
  */
-export function calculateProportionalBasicSalary(
-  employee: Employee,
-  attendance: Attendance
-): number {
-  const monthlyBasicSalary = parseFloat(employee.basic_salary);
-  const workingDays = parseInt(attendance.working_days.toString()) || KUWAIT_WORKING_DAYS_PER_MONTH;
-  const presentDays = parseInt(attendance.present_days.toString()) || 0;
-  
-  const dailyRate = monthlyBasicSalary / workingDays;
-  return presentDays * dailyRate;
+export function getBasicSalary(employee: Employee): number {
+  return parseFloat(employee.basic_salary);
 }
 
 /**
  * Calculate complete payroll for an employee
+ * Based on specification: Gross Salary = Basic Salary + Total OT Pay + Food Allowance
+ *                        Net Salary = Gross Salary - Deductions
  */
 export function calculateEmployeePayroll(
   employee: Employee,
@@ -145,29 +158,35 @@ export function calculateEmployeePayroll(
   monthlyLeaves: Leave[]
 ): {
   basicSalary: number;
+  hourlyBasicSalary: number;
   otAmount: number;
   foodAllowance: number;
   grossSalary: number;
   deductions: number;
   netSalary: number;
   breakdown: {
-    otNormal: number;
-    otFriday: number;
-    otHoliday: number;
+    otRates: {
+      normal: number;
+      friday: number;
+      holiday: number;
+    };
+    otPay: {
+      normal: number;
+      friday: number;
+      holiday: number;
+    };
     workingDays: number;
     presentDays: number;
     absentDays: number;
-    dailyRate: number;
   };
 } {
-  const monthlyBasicSalary = parseFloat(employee.basic_salary);
   const workingDays = parseInt(attendance.working_days.toString()) || KUWAIT_WORKING_DAYS_PER_MONTH;
   const presentDays = parseInt(attendance.present_days.toString()) || 0;
   const absentDays = parseInt(attendance.absent_days.toString()) || 0;
   
-  // Calculate proportional basic salary (based on days actually worked)
-  const basicSalary = calculateProportionalBasicSalary(employee, attendance);
-  const dailyRate = monthlyBasicSalary / workingDays;
+  // Get full basic salary (not prorated)
+  const basicSalary = getBasicSalary(employee);
+  const hourlyBasicSalary = calculateHourlyBasicSalary(basicSalary);
   
   // Calculate OT
   const ot = calculateOvertimeAmount(employee, attendance);
@@ -175,26 +194,33 @@ export function calculateEmployeePayroll(
   // Calculate food allowance
   const foodAllowance = calculateFoodAllowance(employee, attendance, monthlyLeaves);
   
-  // Calculate totals (no deductions - salary already proportional)
-  const grossSalary = basicSalary + ot.total + foodAllowance;
+  // Calculate Gross Salary: Basic Salary + Total OT Pay + Food Allowance
+  const grossSalary = basicSalary + ot.pay.total + foodAllowance;
+  
+  // Deductions (can be extended in future)
   const totalDeductions = 0;
+  
+  // Calculate Net Salary: Gross Salary - Deductions
   const netSalary = grossSalary - totalDeductions;
   
   return {
     basicSalary,
-    otAmount: ot.total,
+    hourlyBasicSalary,
+    otAmount: ot.pay.total,
     foodAllowance,
     grossSalary,
     deductions: totalDeductions,
     netSalary,
     breakdown: {
-      otNormal: ot.normal,
-      otFriday: ot.friday,
-      otHoliday: ot.holiday,
+      otRates: ot.rates,
+      otPay: {
+        normal: ot.pay.normal,
+        friday: ot.pay.friday,
+        holiday: ot.pay.holiday,
+      },
       workingDays,
       presentDays,
       absentDays,
-      dailyRate,
     },
   };
 }

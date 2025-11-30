@@ -57,7 +57,7 @@ export default function Attendance() {
       const payload = records.map((r) => ({
         emp_id: r.emp_id,
         month: selectedMonth,
-        working_days: Array.isArray(r.dailyStatus) ? r.dailyStatus.length : 30,
+        working_days: r.total_working_days ?? (Array.isArray(r.dailyStatus) ? r.dailyStatus.length : 30),
         present_days: r.worked_days,
         absent_days: r.unpaid_days,
         ot_hours_normal: to2(r.normal_ot),

@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calculator, RefreshCw } from "lucide-react";
+import * as XLSX from "xlsx";
 
 export default function Payroll() {
   const [months, setMonths] = useState<{ value: string; label: string }[]>([]);
@@ -171,7 +172,7 @@ export default function Payroll() {
   }
 
   // Save edited payroll data
-  async function handleSave(data: any[]) {
+  async function handleSave(data: any[], silent = false) {
     if (!selectedMonth) return;
     
     setLoading(true);
@@ -199,7 +200,7 @@ export default function Payroll() {
         }
       }
 
-      alert("Payroll saved successfully");
+      if (!silent) alert("Payroll saved successfully");
       await handleRefresh();
     } catch (err) {
       console.error("Error saving payroll:", err);
@@ -212,15 +213,42 @@ export default function Payroll() {
   // Approve and finalize payroll
   async function handleApprove(data: any[]) {
     const confirmed = window.confirm(
-      `Approve and finalize payroll for ${formatMonthLabel(selectedMonth)}? This action cannot be undone.`
+      `Download payroll sheet for ${formatMonthLabel(selectedMonth)}?`
     );
 
     if (!confirmed) return;
 
-    // First save the data
-    await handleSave(data);
+    // First save the data silently
+    await handleSave(data, true);
 
-    alert("Payroll approved and finalized successfully!");
+    // Generate Excel
+    try {
+      const exportData = data.map(row => ({
+        "Employee ID": row.emp_id,
+        "Basic Salary": Number(row.basic_salary),
+        "OT Amount": Number(row.ot_amount),
+        "Food Allowance": Number(row.food_allowance),
+        "Gross Salary": Number(row.gross_salary),
+        "Deductions": Number(row.deductions),
+        "Net Salary": Number(row.net_salary),
+        "Comments": row.comment || ""
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Payroll");
+      
+      const filename = `Payroll_${selectedMonth}.xlsx`;
+      XLSX.writeFile(workbook, filename);
+
+      // Reset state to accommodate next action
+      setPayrollData([]);
+      setSelectedMonth("");
+      
+    } catch (err) {
+      console.error("Error generating excel:", err);
+      alert("Failed to generate Excel file");
+    }
   }
 
   return (
