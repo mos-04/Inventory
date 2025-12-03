@@ -38,6 +38,7 @@ interface PayrollTableProps {
 }
 
 const DEFAULT_HOURS_PER_DAY = 8;
+const DEFAULT_MONTH_WORKING_DAYS = 26;
 
 const toNumber = (value: string | number | undefined | null, fallback = 0): number => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
@@ -54,7 +55,11 @@ const toNumber = (value: string | number | undefined | null, fallback = 0): numb
   
   // "working_days" = Total available working days in the month (e.g., 26 or 30)
   // If this is missing from your data, you must provide a default (e.g., 26) or the math breaks.
-  const totalMonthWorkingDays = toNumber(row.working_days, 26); 
+  const rawWorkingDays = toNumber(row.working_days, 0);
+  // Guard against attendance uploads that duplicated days_worked into working_days
+  const totalMonthWorkingDays = rawWorkingDays > toNumber(row.days_worked, 0)
+    ? rawWorkingDays
+    : Math.max(DEFAULT_MONTH_WORKING_DAYS, toNumber(row.days_worked, 0)); 
   
   // "days_worked" = Actual days the employee attended
   const daysWorked = toNumber(row.days_worked, 0);
