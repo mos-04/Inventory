@@ -15,7 +15,6 @@ interface EmployeeFormData {
   emp_id: string;
   name: string;
   civil_id: string;
-  date_of_birth: string;
   designation: string;
   category: "Direct" | "Indirect";
   project: string;
@@ -43,7 +42,6 @@ export default function EmployeeForm({ initialData, onSubmit, onCancel }: Employ
     emp_id: initialData?.emp_id || "",
     name: initialData?.name || "",
     civil_id: initialData?.civil_id || "",
-    date_of_birth: initialData?.date_of_birth || "",
     designation: initialData?.designation || "",
     category: initialData?.category || "Direct",
     project: initialData?.project || "",
@@ -113,19 +111,6 @@ export default function EmployeeForm({ initialData, onSubmit, onCancel }: Employ
               placeholder="e.g., John Smith"
               required
               data-testid="input-name"
-              className="h-10"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="date_of_birth" className="text-sm font-medium">
-              Date of Birth
-            </Label>
-            <Input
-              id="date_of_birth"
-              type="date"
-              value={formData.date_of_birth}
-              onChange={(e) => updateField("date_of_birth", e.target.value)}
-              data-testid="input-dob"
               className="h-10"
             />
           </div>

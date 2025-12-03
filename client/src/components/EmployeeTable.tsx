@@ -23,7 +23,6 @@ interface EmployeeRow {
   department: string;
   category: string;
   civil_id?: string | null;
-  date_of_birth?: string | null;
   doj: string;
   internal_department_doj?: string | null;
   five_year_calc_date?: string | null;
@@ -87,7 +86,6 @@ export default function EmployeeTable({ employees, onEdit, onDelete }: EmployeeT
               <TableHead className="font-semibold">Name</TableHead>
               <TableHead className="font-semibold">Designation</TableHead>
               <TableHead className="font-semibold">Civil ID</TableHead>
-              <TableHead className="font-semibold">Date of Birth</TableHead>
               <TableHead className="font-semibold">Department</TableHead>
               <TableHead className="font-semibold">Category</TableHead>
               <TableHead className="font-semibold text-right">Monthly Salary</TableHead>
@@ -112,7 +110,6 @@ export default function EmployeeTable({ employees, onEdit, onDelete }: EmployeeT
                 <TableCell className="font-medium">{employee.name}</TableCell>
                 <TableCell className="text-sm">{employee.designation}</TableCell>
                 <TableCell className="text-sm">{employee.civil_id || "-"}</TableCell>
-                <TableCell className="text-sm">{formatDate(employee.date_of_birth)}</TableCell>
                 <TableCell className="text-sm">{employee.department}</TableCell>
                 <TableCell className="text-sm">{employee.category}</TableCell>
                 <TableCell className="text-right font-mono text-sm">

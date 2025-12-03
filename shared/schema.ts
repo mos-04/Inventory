@@ -21,7 +21,6 @@ export const employees = pgTable("employees", {
   emp_id: varchar("emp_id", { length: 50 }).primaryKey(),
   name: text("name").notNull(),
   civil_id: text("civil_id"),
-  date_of_birth: date("date_of_birth"),
   designation: text("designation").notNull(),
   department: text("department").notNull(),
   category: text("category").notNull().default("Direct"),

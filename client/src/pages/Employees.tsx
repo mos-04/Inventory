@@ -21,7 +21,6 @@ interface EmployeeRow {
   department: string;
   category: string;
   civil_id?: string | null;
-  date_of_birth?: string | null;
   doj: string;
   internal_department_doj?: string | null;
   five_year_calc_date?: string | null;
@@ -52,7 +51,6 @@ export default function Employees() {
         department: e.department || "-",
         category: e.category || "Direct",
         civil_id: e.civil_id || "",
-        date_of_birth: e.date_of_birth || "",
         doj: e.doj,
         internal_department_doj: e.internal_department_doj || "",
         five_year_calc_date: e.five_year_calc_date || "",
@@ -103,7 +101,6 @@ export default function Employees() {
       department: data.project || "General",
       category: data.category,
       civil_id: data.civil_id?.trim() || null,
-      date_of_birth: data.date_of_birth || null,
       doj: data.doj,
       internal_department_doj: data.internal_department_doj || null,
       five_year_calc_date: data.five_year_calc_date || null,
@@ -182,7 +179,6 @@ export default function Employees() {
               project: editingEmployee.department,
               category: editingEmployee.category,
               civil_id: editingEmployee.civil_id || "",
-              date_of_birth: editingEmployee.date_of_birth || "",
               doj: editingEmployee.doj,
               internal_department_doj: editingEmployee.internal_department_doj || "",
               five_year_calc_date: editingEmployee.five_year_calc_date || "",
