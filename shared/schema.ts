@@ -18,31 +18,31 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
 export const employees = pgTable("employees", {
-  emp_id: varchar("emp_id", { length: 50 }).primaryKey(),
+  // REMOVED: id: serial("id").primaryKey(),  ← This causes the error!
+  emp_id: varchar("emp_id", { length: 50 }).primaryKey(),  // ← emp_id IS your PK
   name: text("name").notNull(),
-  civil_id: text("civil_id"),
+  civil_id: text("civil_id"),  // Add this if it exists in your table
   designation: text("designation").notNull(),
   department: text("department").notNull(),
-  category: text("category").notNull().default("Direct"),
+  category: text("category").notNull().default("Direct"),  // Add if exists
   doj: date("doj").notNull(),
-  internal_department_doj: date("internal_department_doj"),
-  five_year_calc_date: date("five_year_calc_date"),
+  internal_department_doj: date("internal_department_doj"), // Add if exists
+  five_year_calc_date: date("five_year_calc_date"),       // Add if exists
   basic_salary: decimal("basic_salary", { precision: 10, scale: 2 }).notNull(),
-  other_allowance: decimal("other_allowance", { precision: 10, scale: 2 }).notNull().default("0"),
+  other_allowance: decimal("other_allowance", { precision: 10, scale: 2 }).notNull().default("0"), // Add if exists
   ot_rate_normal: decimal("ot_rate_normal", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_rate_friday: decimal("ot_rate_friday", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_rate_holiday: decimal("ot_rate_holiday", { precision: 10, scale: 2 }).notNull().default("0"),
   food_allowance_type: text("food_allowance_type").notNull().default("none"),
   food_allowance_amount: decimal("food_allowance_amount", { precision: 10, scale: 2 }).notNull().default("0"),
-  working_hours: integer("working_hours").notNull().default(8),
-  indemnity_rate: decimal("indemnity_rate", { precision: 10, scale: 2 }).notNull().default("0"),
+  working_hours: integer("working_hours").notNull().default(8),  // Fixed type
+  indemnity_rate: decimal("indemnity_rate", { precision: 10, scale: 2 }).notNull().default("0"), // Add if exists
   status: text("status").notNull().default("active"),
 });
 
-export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true });
+export const insertEmployeeSchema = createInsertSchema(employees); // No omit needed now
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Employee = typeof employees.$inferSelect;
-
 export const attendance = pgTable("attendance", {
   id: serial("id").primaryKey(),
   emp_id: varchar("emp_id", { length: 50 }).notNull(),
@@ -95,6 +95,7 @@ export const leaves = pgTable("leaves", {
 export const insertLeaveSchema = createInsertSchema(leaves).omit({ id: true, submitted_at: true, reviewed_at: true, reviewed_by: true });
 export type InsertLeave = z.infer<typeof insertLeaveSchema>;
 export type Leave = typeof leaves.$inferSelect;
+
 
 export const indemnity = pgTable("indemnity", {
   id: serial("id").primaryKey(),

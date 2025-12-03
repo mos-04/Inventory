@@ -469,7 +469,7 @@ app.post("/api/payroll/generate", async (req, res) => {
       }
       
       // Calculate Gross Salary: Payable Basic + Total OT Pay + Food Allowance
-      const grossSalary = payableBasicSalary + totalOtPay + foodAllowance;
+      const grossSalary = ((payableBasicSalary/26)*presentDays) + totalOtPay + foodAllowance;
       
       // Deductions (can be extended in the future)
       const deductions = 0;
