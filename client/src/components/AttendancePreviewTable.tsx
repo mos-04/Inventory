@@ -68,7 +68,11 @@ export function AttendancePreviewTable({ records, onChange }: AttendancePreviewT
             </TableRow>
           </TableHeader>
           <TableBody>
-            {records.map((record, index) => (
+            {records.map((record, index) => {
+              const workingDays = record.total_working_days ?? (Array.isArray(record.dailyStatus) ? record.dailyStatus.length : 30);
+              const computedAbsent = Math.max(workingDays - Number(record.worked_days ?? 0), 0);
+
+              return (
               <TableRow
                 key={index}
                 className={record.isValid ? "hover-elevate" : "bg-destructive/10"}
@@ -86,7 +90,11 @@ export function AttendancePreviewTable({ records, onChange }: AttendancePreviewT
                     type="number"
                     className="w-16 text-right bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
                     value={record.total_working_days ?? 30}
-                    onChange={(e) => onChange(index, { total_working_days: Number(e.target.value || 0) })}
+                    onChange={(e) => {
+                      const nextWorking = Number(e.target.value || 0);
+                      const nextAbsent = Math.max(nextWorking - Number(record.worked_days ?? 0), 0);
+                      onChange(index, { total_working_days: nextWorking, unpaid_days: nextAbsent });
+                    }}
                   />
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm">
@@ -94,7 +102,11 @@ export function AttendancePreviewTable({ records, onChange }: AttendancePreviewT
                     type="number"
                     className="w-16 text-right bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
                     value={record.worked_days}
-                    onChange={(e) => onChange(index, { worked_days: Number(e.target.value || 0) })}
+                    onChange={(e) => {
+                      const nextWorked = Number(e.target.value || 0);
+                      const nextAbsent = Math.max(workingDays - nextWorked, 0);
+                      onChange(index, { worked_days: nextWorked, unpaid_days: nextAbsent });
+                    }}
                   />
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm">
@@ -125,12 +137,7 @@ export function AttendancePreviewTable({ records, onChange }: AttendancePreviewT
                   />
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm">
-                  <input
-                    type="number"
-                    className="w-16 text-right bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
-                    value={record.unpaid_days}
-                    onChange={(e) => onChange(index, { unpaid_days: Number(e.target.value || 0) })}
-                  />
+                  {computedAbsent}
                 </TableCell>
                 <TableCell>
                   {record.isValid ? (
@@ -153,7 +160,8 @@ export function AttendancePreviewTable({ records, onChange }: AttendancePreviewT
                   />
                 </TableCell>
               </TableRow>
-            ))}
+            );
+            })}
           </TableBody>
         </Table>
       </div>

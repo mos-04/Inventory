@@ -67,6 +67,7 @@ export const payroll = pgTable("payroll", {
   basic_salary: decimal("basic_salary", { precision: 10, scale: 2 }).notNull(),
   ot_amount: decimal("ot_amount", { precision: 10, scale: 2 }).notNull().default("0"),
   food_allowance: decimal("food_allowance", { precision: 10, scale: 2 }).notNull().default("0"),
+  days_worked: integer("days_worked").notNull().default(0),
   gross_salary: decimal("gross_salary", { precision: 10, scale: 2 }).notNull(),
   deductions: decimal("deductions", { precision: 10, scale: 2 }).notNull().default("0"),
   net_salary: decimal("net_salary", { precision: 10, scale: 2 }).notNull(),

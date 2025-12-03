@@ -1,9 +1,63 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertEmployeeSchema, insertAttendanceSchema, insertPayrollSchema, insertLeaveSchema, insertIndemnitySchema } from "@shared/schema";
+import { insertEmployeeSchema, insertAttendanceSchema, insertPayrollSchema, insertLeaveSchema, insertIndemnitySchema, type Payroll, type Attendance } from "@shared/schema";
 import { z } from "zod";
 import { error } from "console";
+
+type PayrollWithContext = Payroll & {
+  contract_basic_salary?: number;
+  working_days?: number;
+  hours_per_day?: number;
+  scheduled_hours?: number;
+};
+
+const DEFAULT_PAYROLL_HOURS_PER_DAY = 8;
+
+async function enrichPayrollRows(payroll: Payroll[], month?: string): Promise<PayrollWithContext[]> {
+  if (payroll.length === 0) {
+    return [];
+  }
+
+  const attendancePromise = month
+    ? storage.getAttendance(month)
+    : Promise.resolve<Attendance[]>([]);
+
+  const [employees, attendance] = await Promise.all([
+    storage.getEmployees(),
+    attendancePromise,
+  ]);
+
+  const employeeMap = new Map(employees.map((employee) => [employee.emp_id, employee]));
+  const attendanceMap = new Map<string, { workingDays: number }>();
+
+  for (const entry of attendance) {
+    const current = attendanceMap.get(entry.emp_id) ?? { workingDays: 0 };
+    current.workingDays += Number(entry.working_days ?? 0);
+    attendanceMap.set(entry.emp_id, current);
+  }
+
+  return payroll.map((record) => {
+    const employee = employeeMap.get(record.emp_id);
+    const stats = attendanceMap.get(record.emp_id);
+    const hoursPerDay = employee && Number(employee.working_hours) > 0
+      ? Number(employee.working_hours)
+      : DEFAULT_PAYROLL_HOURS_PER_DAY;
+    const workingDays = stats?.workingDays;
+    const contractBasic = employee ? parseFloat(employee.basic_salary) : undefined;
+    const scheduledHours = workingDays && hoursPerDay
+      ? workingDays * hoursPerDay
+      : undefined;
+
+    return {
+      ...record,
+      contract_basic_salary: contractBasic,
+      working_days: workingDays,
+      hours_per_day: hoursPerDay,
+      scheduled_hours: scheduledHours,
+    };
+  });
+}
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -208,7 +262,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const month = req.query.month as string | undefined;
       const payroll = await storage.getPayroll(month);
-      res.json(payroll);
+      const enriched = await enrichPayrollRows(payroll, month);
+      res.json(enriched);
     } catch (error) {
       console.error("/api/payroll error:", error);
       res.status(500).json({ error: "Failed to fetch payroll" });
@@ -219,7 +274,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const month = req.query.month as string | undefined;
       const payroll = await storage.getPayrollByEmployee(req.params.empId, month);
-      res.json(payroll);
+      const enriched = await enrichPayrollRows(payroll, month);
+      res.json(enriched);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch payroll" });
     }
@@ -327,15 +383,27 @@ app.post("/api/payroll/generate", async (req, res) => {
       const otRateHoliday = parseFloat(employee.ot_rate_holiday || "0");
       const foodAllowanceAmount = parseFloat(employee.food_allowance_amount || "0");
       
-      // CONSTANTS: Standard payroll calculation
-      const HOURS_PER_MONTH = 260; // 26 working days × 10 hours/day
-      
-      // Calculate Hourly Basic Salary (HBS) for OT rates (based on contract salary)
-      const hourlyBasicSalary = monthlyBasicSalary / HOURS_PER_MONTH;
+      // Determine working-hour context for the employee/month
+      const configuredHours = Number(employee.working_hours ?? 0);
+      const hoursPerDay = configuredHours > 0 ? configuredHours : 8;
+      const scheduledHoursForMonth = workingDays * hoursPerDay;
+      const workedHoursForMonth = presentDays * hoursPerDay;
 
-      // Calculate Prorated Basic Salary (Payable Basic) based on attendance
-      // Formula: (Monthly Salary / Total Working Days) * Present Days
-      const payableBasicSalary = (monthlyBasicSalary / workingDays) * presentDays;
+      if (scheduledHoursForMonth === 0) {
+        console.log(`Warning: Skipping ${employee.emp_id} (${employee.name}) - Zero scheduled hours`);
+        errors.push({
+          emp_id: employee.emp_id,
+          name: employee.name,
+          error: "Zero scheduled working hours"
+        });
+        continue;
+      }
+
+      // Calculate Hourly Basic Salary (HBS) for OT and gross salary calculations
+      const hourlyBasicSalary = monthlyBasicSalary / scheduledHoursForMonth;
+
+      // Calculate Prorated Basic Salary (Payable Basic) using actual worked hours
+      const payableBasicSalary = hourlyBasicSalary * workedHoursForMonth;
       
       // OT hours are already aggregated above (from all attendance records for the month)
       
@@ -414,7 +482,7 @@ app.post("/api/payroll/generate", async (req, res) => {
       console.log(`  Month: ${month} | Attendance Records: ${empAttendances.length}`);
       console.log(`  Contract Basic Salary: ${monthlyBasicSalary.toFixed(3)} KWD`);
       console.log(`  Payable Basic Salary (Prorated): ${payableBasicSalary.toFixed(3)} KWD`);
-      console.log(`  Hourly Basic Salary (HBS): ${hourlyBasicSalary.toFixed(3)} KWD/hour`);
+      console.log(`  Hourly Basic Salary (HBS): ${hourlyBasicSalary.toFixed(3)} KWD/hour (based on ${scheduledHoursForMonth} scheduled hours)`);
       console.log(`  Aggregated Attendance - Working: ${workingDays}, Present: ${presentDays}, Absent: ${absentDays} days`);
       console.log(`  Aggregated OT Hours - Normal: ${otHoursNormal.toFixed(2)}h, Friday: ${otHoursFriday.toFixed(2)}h, Holiday: ${otHoursHoliday.toFixed(2)}h`);
       console.log(`  OT Rates - Normal: ${normalOtRate.toFixed(3)}, Friday: ${fridayOtRate.toFixed(3)}, Holiday: ${holidayOtRate.toFixed(3)} KWD/hour`);
@@ -431,6 +499,7 @@ app.post("/api/payroll/generate", async (req, res) => {
         basic_salary: payableBasicSalary.toFixed(2),
         ot_amount: totalOtPay.toFixed(2),
         food_allowance: foodAllowance.toFixed(2),
+        days_worked: presentDays,
         gross_salary: grossSalary.toFixed(2),
         deductions: deductions.toFixed(2),
         net_salary: netSalary.toFixed(2),
@@ -593,7 +662,7 @@ app.post("/api/payroll/generate", async (req, res) => {
         const p = payMap.get(e.emp_id);
 
         // Attendance-driven numbers
-        const worked_days = a?.present_days ?? 0;
+        const worked_days = p ? Number(p.days_worked ?? 0) : (a?.present_days ?? 0);
         const working_days = a?.working_days ?? 0;
         const normal_ot = Number(a?.ot_hours_normal ?? 0);
         const friday_ot = Number(a?.ot_hours_friday ?? 0);

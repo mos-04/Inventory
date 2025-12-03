@@ -228,7 +228,7 @@ export default function Payroll() {
         "Basic Salary": Number(row.basic_salary),
         "OT Amount": Number(row.ot_amount),
         "Food Allowance": Number(row.food_allowance),
-        "Gross Salary": Number(row.gross_salary),
+        "Days Worked": Number(row.days_worked ?? 0),
         "Deductions": Number(row.deductions),
         "Net Salary": Number(row.net_salary),
         "Comments": row.comment || ""

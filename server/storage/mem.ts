@@ -135,6 +135,7 @@ export class MemStorage implements IStorage {
       ot_amount: "0",
       food_allowance: "0",
       deductions: "0",
+      days_worked: 0,
       ...payroll,
       generated_at: new Date(),
     };

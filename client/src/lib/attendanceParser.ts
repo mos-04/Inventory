@@ -91,7 +91,6 @@ export async function parseAttendanceFile(file: File): Promise<{ fileName: strin
 
     const dailyStatus: string[] = dayCols.map((idx) => String(row[idx] ?? "").trim());
     const worked_days = dailyStatus.filter((d) => d === "P" || d === "p").length;
-    const unpaid_days = dailyStatus.length - worked_days;
 
     const toNum = (v: any) => {
       const n = parseFloat(String(v).replace(/[^0-9.-]/g, ""));
@@ -102,7 +101,9 @@ export async function parseAttendanceFile(file: File): Promise<{ fileName: strin
     const FOT = fotCol !== -1 ? toNum(row[fotCol]) : 0;
     const PHOT = photCol !== -1 ? toNum(row[photCol]) : 0;
     const comments = commentsCol !== -1 ? String(row[commentsCol] ?? "").trim() : "";
-    const totalWorkingDays = totalWorkingDaysCol !== -1 ? toNum(row[totalWorkingDaysCol]) : undefined;
+    const totalWorkingDaysRaw = totalWorkingDaysCol !== -1 ? toNum(row[totalWorkingDaysCol]) : undefined;
+    const totalWorkingDays = Number.isFinite(totalWorkingDaysRaw) && totalWorkingDaysRaw ? totalWorkingDaysRaw : dailyStatus.length;
+    const unpaid_days = Math.max(totalWorkingDays - worked_days, 0);
 
     parsedRecords.push({
       emp_id,

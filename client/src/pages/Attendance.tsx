@@ -54,16 +54,22 @@ export default function Attendance() {
   const handleUpload = async (records: any[]) => {
     try {
       const to2 = (n: number) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
-      const payload = records.map((r) => ({
-        emp_id: r.emp_id,
-        month: selectedMonth,
-        working_days: r.total_working_days ?? (Array.isArray(r.dailyStatus) ? r.dailyStatus.length : 30),
-        present_days: r.worked_days,
-        absent_days: r.unpaid_days,
-        ot_hours_normal: to2(r.normal_ot),
-        ot_hours_friday: to2(r.friday_ot),
-        ot_hours_holiday: to2(r.holiday_ot),
-      }));
+      const payload = records.map((r) => {
+        const working_days = r.total_working_days ?? (Array.isArray(r.dailyStatus) ? r.dailyStatus.length : 30);
+        const present_days = Number(r.worked_days ?? 0);
+        const absent_days = Math.max(Number(working_days) - present_days, 0);
+
+        return {
+          emp_id: r.emp_id,
+          month: selectedMonth,
+          working_days,
+          present_days,
+          absent_days,
+          ot_hours_normal: to2(r.normal_ot),
+          ot_hours_friday: to2(r.friday_ot),
+          ot_hours_holiday: to2(r.holiday_ot),
+        };
+      });
 
       await apiRequest("POST", "/api/attendance/bulk", payload);
       alert("Attendance records saved successfully.");
