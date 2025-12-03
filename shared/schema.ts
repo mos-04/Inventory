@@ -18,18 +18,25 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
 export const employees = pgTable("employees", {
-  id: serial("id").primaryKey(),
-  emp_id: varchar("emp_id", { length: 50 }).notNull().unique(),
+  emp_id: varchar("emp_id", { length: 50 }).primaryKey(),
   name: text("name").notNull(),
+  civil_id: text("civil_id"),
+  date_of_birth: date("date_of_birth"),
   designation: text("designation").notNull(),
   department: text("department").notNull(),
+  category: text("category").notNull().default("Direct"),
   doj: date("doj").notNull(),
+  internal_department_doj: date("internal_department_doj"),
+  five_year_calc_date: date("five_year_calc_date"),
   basic_salary: decimal("basic_salary", { precision: 10, scale: 2 }).notNull(),
+  other_allowance: decimal("other_allowance", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_rate_normal: decimal("ot_rate_normal", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_rate_friday: decimal("ot_rate_friday", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_rate_holiday: decimal("ot_rate_holiday", { precision: 10, scale: 2 }).notNull().default("0"),
   food_allowance_type: text("food_allowance_type").notNull().default("none"),
   food_allowance_amount: decimal("food_allowance_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+  working_hours: integer("working_hours").notNull().default(8),
+  indemnity_rate: decimal("indemnity_rate", { precision: 10, scale: 2 }).notNull().default("0"),
   status: text("status").notNull().default("active"),
 });
 

@@ -61,6 +61,10 @@ export class MemStorage implements IStorage {
       ot_rate_holiday: "0",
       food_allowance_type: "none",
       food_allowance_amount: "0",
+      category: "Direct",
+      working_hours: 8,
+      other_allowance: "0",
+      indemnity_rate: "0",
       ...employee,
     };
     this.employees.set(employee.emp_id, newEmployee);

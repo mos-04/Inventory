@@ -10,15 +10,29 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-// Badge removed: category no longer displayed.
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "KWD",
+  minimumFractionDigits: 2,
+});
 
 interface EmployeeRow {
   emp_id: string;
   name: string;
   designation: string;
   department: string;
-  basic_salary: number;
+  category: string;
+  civil_id?: string | null;
+  date_of_birth?: string | null;
   doj: string;
+  internal_department_doj?: string | null;
+  five_year_calc_date?: string | null;
+  basic_salary: number;
+  food_allowance_type: "per_day" | "fixed" | "none";
+  food_allowance_amount: number;
+  other_allowance: number;
+  working_hours: number;
+  indemnity_rate: number;
 }
 
 interface EmployeeTableProps {
@@ -30,11 +44,25 @@ interface EmployeeTableProps {
 export default function EmployeeTable({ employees, onEdit, onDelete }: EmployeeTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredEmployees = employees.filter((emp) =>
-    emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.emp_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.department.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const normalizedQuery = searchTerm.toLowerCase();
+  const filteredEmployees = employees.filter((emp) => {
+    const fields = [
+      emp.name,
+      emp.emp_id,
+      emp.department,
+      emp.civil_id || "",
+      emp.category || "",
+    ];
+    return fields.some((field) => field.toLowerCase().includes(normalizedQuery));
+  });
+
+  const formatCurrency = (value: number) => currencyFormatter.format(value || 0);
+  const formatDate = (value?: string | null) => (value ? value : "-");
+  const formatFoodAllowance = (employee: EmployeeRow) => {
+    if (employee.food_allowance_type === "none") return "-";
+    const label = employee.food_allowance_type === "per_day" ? "Per Day" : "Fixed";
+    return `${label} ${formatCurrency(employee.food_allowance_amount)}`;
+  };
 
   return (
     <div className="space-y-4">
@@ -51,21 +79,30 @@ export default function EmployeeTable({ employees, onEdit, onDelete }: EmployeeT
         </div>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader className="sticky top-0 bg-muted/50">
             <TableRow>
               <TableHead className="font-semibold">Emp ID</TableHead>
               <TableHead className="font-semibold">Name</TableHead>
               <TableHead className="font-semibold">Designation</TableHead>
+              <TableHead className="font-semibold">Civil ID</TableHead>
+              <TableHead className="font-semibold">Date of Birth</TableHead>
               <TableHead className="font-semibold">Department</TableHead>
-              <TableHead className="font-semibold text-right">Salary</TableHead>
+              <TableHead className="font-semibold">Category</TableHead>
+              <TableHead className="font-semibold text-right">Monthly Salary</TableHead>
+              <TableHead className="font-semibold">Food Allowance</TableHead>
+              <TableHead className="font-semibold text-right">Other Allowance</TableHead>
               <TableHead className="font-semibold">DOJ</TableHead>
+              <TableHead className="font-semibold">DOJ (Internal)</TableHead>
+              <TableHead className="font-semibold">5 Year Calc</TableHead>
+              <TableHead className="font-semibold text-right">Working Hrs</TableHead>
+              <TableHead className="font-semibold text-right">Indemnity @</TableHead>
               <TableHead className="font-semibold text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredEmployees.map((employee, index) => (
+            {filteredEmployees.map((employee) => (
               <TableRow
                 key={employee.emp_id}
                 className="hover-elevate"
@@ -74,11 +111,24 @@ export default function EmployeeTable({ employees, onEdit, onDelete }: EmployeeT
                 <TableCell className="font-mono text-sm">{employee.emp_id}</TableCell>
                 <TableCell className="font-medium">{employee.name}</TableCell>
                 <TableCell className="text-sm">{employee.designation}</TableCell>
+                <TableCell className="text-sm">{employee.civil_id || "-"}</TableCell>
+                <TableCell className="text-sm">{formatDate(employee.date_of_birth)}</TableCell>
                 <TableCell className="text-sm">{employee.department}</TableCell>
+                <TableCell className="text-sm">{employee.category}</TableCell>
                 <TableCell className="text-right font-mono text-sm">
-                  ${employee.basic_salary.toLocaleString()}
+                  {formatCurrency(employee.basic_salary)}
+                </TableCell>
+                <TableCell className="text-sm">{formatFoodAllowance(employee)}</TableCell>
+                <TableCell className="text-right font-mono text-sm">
+                  {formatCurrency(employee.other_allowance)}
                 </TableCell>
                 <TableCell className="text-sm">{employee.doj}</TableCell>
+                <TableCell className="text-sm">{formatDate(employee.internal_department_doj)}</TableCell>
+                <TableCell className="text-sm">{formatDate(employee.five_year_calc_date)}</TableCell>
+                <TableCell className="text-right text-sm">{employee.working_hours || 0}</TableCell>
+                <TableCell className="text-right font-mono text-sm">
+                  {employee.indemnity_rate ? formatCurrency(employee.indemnity_rate) : "-"}
+                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button
