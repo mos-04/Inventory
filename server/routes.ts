@@ -51,6 +51,7 @@ async function enrichPayrollRows(payroll: Payroll[], month?: string): Promise<Pa
 
     return {
       ...record,
+      name: employee?.name,
       contract_basic_salary: contractBasic,
       working_days: workingDays,
       hours_per_day: hoursPerDay,

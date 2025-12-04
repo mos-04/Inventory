@@ -27,56 +27,111 @@ export default function Reports() {
     "friday_ot",
     "holiday_ot",
     "total_earnings",
+    "comments", // Added to default selected columns
   ]);
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Generate months dynamically (same as other pages)
   useEffect(() => {
-    function generateMonths() {
+    async function generateMonths() {
       const monthNames = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
       ];
 
-      const now = new Date();
-      const allMonths = [];
+      try {
+        const [attendanceRes, payrollRes] = await Promise.all([
+          fetch("/api/attendance", { credentials: "include" }),
+          fetch("/api/payroll", { credentials: "include" })
+        ]);
 
-      // Generate 12 months back + current + 6 forward
-      for (let i = -12; i <= 6; i++) {
-        const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const mm = String(date.getMonth() + 1).padStart(2, "0");
-        const yyyy = date.getFullYear();
-        const value = `${mm}-${yyyy}`;
-        const label = `${monthNames[date.getMonth()]} ${yyyy}`;
-        allMonths.push({ value, label });
+        const attendanceData = attendanceRes.ok ? await attendanceRes.json() : [];
+        const payrollData = payrollRes.ok ? await payrollRes.json() : [];
+
+        const allMonthsSet = new Set<string>();
+        attendanceData.forEach((record: any) => {
+          if (record.month) allMonthsSet.add(record.month);
+        });
+        payrollData.forEach((record: any) => {
+          if (record.month) allMonthsSet.add(record.month);
+        });
+
+        const existingMonths: { value: string; label: string; date: Date }[] = [];
+        allMonthsSet.forEach(monthStr => {
+          try {
+            const [mm, yyyy] = monthStr.split('-');
+            const date = new Date(parseInt(yyyy), parseInt(mm) - 1, 1);
+            const label = `${monthNames[date.getMonth()]} ${yyyy}`;
+            existingMonths.push({
+              value: `${yyyy}-${mm.padStart(2, '0')}`,
+              label,
+              date
+            });
+          } catch {}
+        });
+
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        for (let month = 1; month <= 12; month++) {
+          const date = new Date(currentYear, month - 1, 1);
+          const mm = String(month).padStart(2, "0");
+          const yyyy = currentYear;
+          const value = `${yyyy}-${mm}`;
+          const label = `${monthNames[month - 1]} ${currentYear}`;
+
+          existingMonths.push({ value, label, date });
+        }
+
+        for (let i = 0; i <= 6; i++) {
+          const date = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
+          const mm = String(date.getMonth() + 1).padStart(2, "0");
+          const yyyy = date.getFullYear();
+          const value = `${yyyy}-${mm}`;
+          const label = `${monthNames[date.getMonth()]} ${yyyy}`;
+          existingMonths.push({ value, label, date });
+        }
+
+        const uniqueMonths = Array.from(
+          new Map(existingMonths.map(item => [item.value, item])).values()
+        );
+
+        uniqueMonths.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+        const cleanMonths = uniqueMonths.map(({ value, label }) => ({ value, label }));
+        setMonths(cleanMonths);
+
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        setSelectedMonth(currentMonth);
+
+      } catch (error) {
+        console.error("Failed to fetch existing months:", error);
+        generateCurrentYearMonths();
       }
-
-      allMonths.sort((a, b) => (a.value < b.value ? 1 : -1));
-      return allMonths;
     }
 
-    const generatedMonths = generateMonths();
-    setMonths(generatedMonths);
+    function generateCurrentYearMonths() {
+      const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+      ];
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const allMonths: { value: string; label: string }[] = [];
 
-    // Set current month as default
-    const now = new Date();
-    const currentMonth = `${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`;
-    setSelectedMonth(currentMonth);
+      for (let month = 1; month <= 12; month++) {
+        const mm = String(month).padStart(2, "0");
+        const value = `${currentYear}-${mm}`;
+        const label = `${monthNames[month - 1]} ${currentYear}`;
+        allMonths.push({ value, label });
+      }
+      setMonths(allMonths);
+      setSelectedMonth(`${currentYear}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+    }
+
+    generateMonths();
   }, []);
 
-  // Load report rows whenever month changes
   useEffect(() => {
     if (!selectedMonth) return;
 
@@ -120,6 +175,7 @@ export default function Reports() {
     { id: "deductions", label: "Deductions" },
     { id: "gross_salary", label: "Gross Salary" },
     { id: "total_earnings", label: "Net Salary" },
+    { id: "comments", label: "Comments" }, // Include comments column
   ];
 
   const toggleColumn = (columnId: string) => {
@@ -134,20 +190,17 @@ export default function Reports() {
       return;
     }
 
-    // Create column headers mapping
     const columnMap: Record<string, string> = {};
     availableColumns.forEach((col) => {
       columnMap[col.id] = col.label;
     });
 
-    // Prepare data with selected columns
     const excelData = rows.map((row) => {
       const filteredRow: Record<string, any> = {};
       selectedColumns.forEach((colId) => {
         const label = columnMap[colId] || colId;
         let value = row[colId];
 
-        // Format numbers properly
         if (
           typeof value === "number" &&
           ["salary", "food_allow", "deductions", "gross_salary", "total_earnings"].includes(colId)
@@ -160,12 +213,10 @@ export default function Reports() {
       return filteredRow;
     });
 
-    // Create worksheet and workbook
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
 
-    // Auto-size columns
     const maxWidths: number[] = [];
     selectedColumns.forEach((colId, idx) => {
       const label = columnMap[colId] || colId;
@@ -173,7 +224,6 @@ export default function Reports() {
     });
     worksheet["!cols"] = maxWidths.map((w) => ({ wch: w }));
 
-    // Generate filename
     const filename = `Salary_Report_${selectedMonth}.xlsx`;
     XLSX.writeFile(workbook, filename);
   };
@@ -184,21 +234,17 @@ export default function Reports() {
       return;
     }
 
-    // Create column headers mapping
     const columnMap: Record<string, string> = {};
     availableColumns.forEach((col) => {
       columnMap[col.id] = col.label;
     });
 
-    // CSV header
     const header = selectedColumns.map((colId) => columnMap[colId] || colId).join(",");
 
-    // CSV rows
     const csvLines = rows.map((row) =>
       selectedColumns
         .map((colId) => {
           let value = row[colId] ?? "";
-          // Escape commas and quotes in CSV
           if (typeof value === "string" && (value.includes(",") || value.includes('"'))) {
             value = `"${value.replace(/"/g, '""')}"`;
           }

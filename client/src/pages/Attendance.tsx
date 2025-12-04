@@ -14,42 +14,126 @@ export default function Attendance() {
   const [months, setMonths] = useState<{ value: string; label: string }[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [uploaderKey, setUploaderKey] = useState(0);
+useEffect(() => {
+  async function generateMonths() {
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    ];
 
-  useEffect(() => {
-    // Generate all months (e.g., last 12 months + next 6 months)
-    function generateMonths() {
-      const monthNames = [
-        "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December",
-      ];
+    try {
+      // Fetch existing data from attendance & payroll tables
+      const [attendanceRes, payrollRes] = await Promise.all([
+        fetch("/api/attendance", { credentials: "include" }),
+        fetch("/api/payroll", { credentials: "include" })
+      ]);
 
+      const attendanceData = attendanceRes.ok ? await attendanceRes.json() : [];
+      const payrollData = payrollRes.ok ? await payrollRes.json() : [];
+
+      // Extract unique months from both tables
+      const allMonthsSet = new Set<string>();
+      
+      attendanceData.forEach((record: any) => {
+        if (record.month) allMonthsSet.add(record.month);
+      });
+      
+      payrollData.forEach((record: any) => {
+        if (record.month) allMonthsSet.add(record.month);
+      });
+
+      // Convert to array and parse dates
+      const existingMonths: { value: string; label: string; date: Date }[] = [];
+      allMonthsSet.forEach(monthStr => {
+        try {
+          const [mm, yyyy] = monthStr.split('-');
+          const date = new Date(parseInt(yyyy), parseInt(mm) - 1, 1);
+          const label = `${monthNames[date.getMonth()]} ${yyyy}`;
+          existingMonths.push({ 
+            value: `${yyyy}-${mm.padStart(2, '0')}`, 
+            label, 
+            date 
+          });
+        } catch {}
+      });
+
+      // Add current year months (even if no data)
       const now = new Date();
-      const allMonths = [];
-
-      // Generate 12 months back + current month + 6 months forward = 19 months
-      for (let i = -12; i <= 6; i++) {
-        const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
-        const mm = String(date.getMonth() + 1).padStart(2, "0");
-        const yyyy = date.getFullYear();
-        const value = `${mm}-${yyyy}`;
-        const label = `${monthNames[date.getMonth()]} ${yyyy}`;
-        allMonths.push({ value, label });
+      const currentYear = now.getFullYear();
+      for (let month = 1; month <= 12; month++) {
+        const date = new Date(currentYear, month - 1, 1);
+        const mm = String(month).padStart(2, "0");
+        const yyyy = currentYear;
+        const value = `${yyyy}-${mm}`;
+        const label = `${monthNames[month - 1]} ${yyyy}`;
+        
+        existingMonths.push({ value, label, date });
       }
 
-      // Sort by date (newest first)
-      allMonths.sort((a, b) => (a.value < b.value ? 1 : -1));
+      // Add next 6 months for future planning
+      for (let i = 0; i <= 6; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
+        const mm = String(date.getMonth() + 1).padStart(2, "0");
+        const yyyy = date.getFullYear();
+        const value = `${yyyy}-${mm}`;
+        const label = `${monthNames[date.getMonth()]} ${yyyy}`;
+        existingMonths.push({ value, label, date });
+      }
 
-      return allMonths;
+      // Remove duplicates and sort by date (newest first)
+      const uniqueMonths = Array.from(
+        new Map(existingMonths.map(item => [item.value, item])).values()
+      );
+      
+      uniqueMonths.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+      // Clean for state (remove date property)
+      const cleanMonths = uniqueMonths.map(({ value, label }) => ({ value, label }));
+      setMonths(cleanMonths);
+
+      // Set current month as default
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      setSelectedMonth(currentMonth);
+
+    } catch (error) {
+      console.error("Failed to fetch existing months:", error);
+      // Fallback to current year months
+      generateCurrentYearMonths();
     }
+  }
 
-    const generatedMonths = generateMonths();
-    setMonths(generatedMonths);
-    
-    // Set current month as default
+  // Fallback function
+  function generateCurrentYearMonths() {
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December",
+    ];
     const now = new Date();
-    const currentMonth = `${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`;
-    setSelectedMonth(currentMonth);
-  }, []);
+    const currentYear = now.getFullYear();
+    const allMonths: { value: string; label: string }[] = [];
+
+    for (let month = 1; month <= 12; month++) {
+      const mm = String(month).padStart(2, "0");
+      const value = `${currentYear}-${mm}`;
+      const label = `${monthNames[month - 1]} ${currentYear}`;
+      allMonths.push({ value, label });
+    }
+    setMonths(allMonths);
+    setSelectedMonth(`${currentYear}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  }
+
+  generateMonths();
+}, []);
+function formatMonthLabel(monthStr: string) {
+  if (!monthStr) return "";
+  const [yyyy, mm] = monthStr.split("-");
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  const monthIndex = parseInt(mm, 10) - 1;
+  return `${monthNames[monthIndex]} ${yyyy}`;
+}
 
   const handleUpload = async (records: any[]) => {
     try {
