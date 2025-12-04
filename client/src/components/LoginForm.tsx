@@ -1,3 +1,4 @@
+// LoginForm.tsx
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,17 +6,20 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface LoginFormProps {
-  onLogin?: (username: string, password: string) => void;
+  onLogin: (username: string, password: string) => void;
+  loading?: boolean;
+  error?: string;
 }
 
-export default function LoginForm({ onLogin }: LoginFormProps) {
+export default function LoginForm({ onLogin, loading = false, error }: LoginFormProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login attempted:", username);
-    onLogin?.(username, password);
+    if (username && password) {
+      onLogin(username, password);
+    }
   };
 
   return (
@@ -31,6 +35,11 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
           <CardDescription>Sign in to access your HR dashboard</CardDescription>
         </CardHeader>
         <CardContent>
+          {error && (
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/30 rounded-md text-destructive text-sm">
+              {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="username" className="text-sm font-medium">
@@ -42,6 +51,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                 placeholder="Enter your username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
+                disabled={loading}
                 required
                 data-testid="input-username"
                 className="h-10"
@@ -57,6 +67,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
                 required
                 data-testid="input-password"
                 className="h-10"
@@ -65,11 +76,18 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
             <Button
               type="submit"
               className="w-full h-10"
+              disabled={loading || !username || !password}
               data-testid="button-login"
             >
-              Sign In
+              {loading ? "Signing In..." : "Sign In"}
             </Button>
           </form>
+          {/* ✅ Demo credentials */}
+          <div className="mt-6 pt-6 border-t text-xs text-muted-foreground text-center">
+            <p><strong>Demo Credentials:</strong></p>
+            <p>username: <code>admin</code></p>
+            <p>password: <code>admin123</code></p>
+          </div>
         </CardContent>
       </Card>
     </div>

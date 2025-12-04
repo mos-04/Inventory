@@ -4,6 +4,10 @@ import { storage } from "./storage";
 import { insertEmployeeSchema, insertAttendanceSchema, insertPayrollSchema, insertLeaveSchema, insertIndemnitySchema, type Payroll, type Attendance } from "@shared/schema";
 import { z } from "zod";
 import { error } from "console";
+import { authenticateJWT } from "./middleware/auth";
+import jwt from "jsonwebtoken";
+import express from "express"; 
+
 
 type PayrollWithContext = Payroll & {
   contract_basic_salary?: number;
@@ -60,73 +64,49 @@ async function enrichPayrollRows(payroll: Payroll[], month?: string): Promise<Pa
   });
 }
 
-
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.use(express.json());     // Parse JSON bodies
+  app.use(express.urlencoded({ extended:  true })); // Parse URL-encoded bodies
 
-//   app.get("/api/health/db", async (req, res) => {
-//   try {
-//     const url = process.env.DATABASE_URL;
-//     if (!url) {
-//       return res.json({
-//         connected: false,
-//         reason: "DATABASE_URL not set",
-//         mode: "memory",
-//         timestamp: new Date().toISOString(),
-//       });
-//     }
+  app.post("/api/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    console.log("Login request body:", req.body); // ✅ ADD THIS
+    console.log("Username:", req.body.username, "Password:", req.body.password); // ✅ ADD THIS
 
-//     let host: string;
-//     let port: number;
-//     try {
-//       const u = new URL(url);
-//       host = u.hostname;
-//       port = Number(u.port) || 5432;
-//     } catch {
-//       return res.json({
-//         connected: false,
-//         reason: "Invalid DATABASE_URL",
-//         mode: "db-configured",
-//         timestamp: new Date().toISOString(),
-//       });
-//     }
-//     let dnsOk = false;
-//     try {
-//       await dns.lookup(host);
-//       dnsOk = true;
-//     } catch { /* ignore */ }
 
-//     const tcpOk = await new Promise<boolean>((resolve) => {
-//       const s = net.createConnection({ host, port, timeout: 2500 });
-//       s.once("connect", () => { s.end(); resolve(true); });
-//       s.once("timeout", () => { s.destroy(); resolve(false); });
-//       s.once("error", () => resolve(false));
-//     });
-//        let sqlOk = false;
-//     try {
-//       const pg = await import("pg").catch(() => null as any);
-//       if (pg?.Client) {
-//         const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
-//         await client.connect();
-//         await client.query("select 1");
-//         await client.end();
-//         sqlOk = true;
-//       }
-//     } catch { /* ignore */ }
+    // ✅ Simple hardcoded users (replace with DB later)
+    const validUsers = [
+      { username: "admin", password: "admin123", role: "admin" },
+      { username: "hr", password: "hr123", role: "hr" },
+      { username: "manager", password: "manager123", role: "manager" },
+    ];
 
-//     const connected = sqlOk || (dnsOk && tcpOk);
-//     res.json({
-//       connected,
-//       details: { dnsOk, tcpOk, sqlOk, host, port },
-//       mode: "db-configured",
-//       timestamp: new Date().toISOString(),
-//     });
-//   } catch (err: any) {
-//     res.status(500).json({ connected: false, error: err?.message || "Unknown error" });
-//   }
-// });
+    const user = validUsers.find(
+      u => u.username === username && u.password === password
+    );
 
+    if (!user) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user.username, role: user.role },
+      process.env.JWT_SECRET || "your-super-secret-key-change-this",
+      { expiresIn: "24h" }
+    );
+
+    res.json({ 
+      token, 
+      user: { username: user.username, role: user.role } 
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Login server error" });
+  }
+});
   
-  app.get("/api/employees", async (req, res) => {
+  app.get("/api/employees", authenticateJWT,async (req, res) => {
     try {
       const employees = await storage.getEmployees();
       res.json(employees);
@@ -136,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/employees/:empId", async (req, res) => {
+  app.get("/api/employees/:empId",authenticateJWT, async (req, res) => {
     try {
       const employee = await storage.getEmployee(req.params.empId);
       if (!employee) {
@@ -148,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/employees", async (req, res) => {
+  app.post("/api/employees", authenticateJWT, async (req, res) => {
     try {
       const data = insertEmployeeSchema.parse(req.body);
       const employee = await storage.createEmployee(data);
@@ -161,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch("/api/employees/:empId", async (req, res) => {
+  app.patch("/api/employees/:empId", authenticateJWT, async (req, res) => {
     try {
       const employee = await storage.updateEmployee(req.params.empId, req.body);
       if (!employee) {
@@ -173,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete("/api/employees/:empId", async (req, res) => {
+  app.delete("/api/employees/:empId", authenticateJWT, async (req, res) => {
     try {
       const deleted = await storage.deleteEmployee(req.params.empId);
       if (!deleted) {
@@ -185,7 +165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/attendance", async (req, res) => {
+  app.get("/api/attendance", authenticateJWT, async (req, res) => {
     try {
       const month = req.query.month as string | undefined;
       const attendance = await storage.getAttendance(month);
@@ -196,7 +176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/attendance/:empId", async (req, res) => {
+  app.get("/api/attendance/:empId", authenticateJWT, async (req, res) => {
     try {
       const month = req.query.month as string | undefined;
       const attendance = await storage.getAttendanceByEmployee(req.params.empId, month);
@@ -206,7 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/attendance", async (req, res) => {
+  app.post("/api/attendance", authenticateJWT, async (req, res) => {
     try {
       const data = insertAttendanceSchema.parse(req.body);
       const attendance = await storage.createAttendance(data);
@@ -219,7 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/attendance/bulk", async (req, res) => {
+  app.post("/api/attendance/bulk", authenticateJWT, async (req, res) => {
     try {
       const attendances = z.array(insertAttendanceSchema).parse(req.body);
 
@@ -245,10 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors });
       }
-      // Log the error server-side for debugging
-      // Include error details in the response when in development to help trace the issue
-      // but avoid leaking internals in production.
-      // eslint-disable-next-line no-console
+
       console.error("Attendance bulk upload error:", error);
       const status = 500;
       const body: any = { error: "Failed to upload attendance" };
@@ -259,7 +236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/payroll", async (req, res) => {
+  app.get("/api/payroll", authenticateJWT, async (req, res) => {
     try {
       const month = req.query.month as string | undefined;
       const payroll = await storage.getPayroll(month);
@@ -271,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/payroll/:empId", async (req, res) => {
+  app.get("/api/payroll/:empId", authenticateJWT, async (req, res) => {
     try {
       const month = req.query.month as string | undefined;
       const payroll = await storage.getPayrollByEmployee(req.params.empId, month);
@@ -282,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/payroll/:empId", async (req, res) => {
+  app.patch("/api/payroll/:empId", authenticateJWT, async (req, res) => {
     try {
       const { month, ...updates } = req.body;
       if (!month) {
@@ -300,7 +277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-app.post("/api/payroll/generate", async (req, res) => {
+app.post("/api/payroll/generate", authenticateJWT, async (req, res) => {
   try {
     const { month } = req.body;
     
@@ -542,21 +519,8 @@ app.post("/api/payroll/generate", async (req, res) => {
     res.status(500).json({ error: "Failed to generate payroll", details: error instanceof Error ? error.message : String(error) });
   }
 });
-  // Mark indemnity as paid (simple status update)
-  app.patch("/api/indemnity/:empId/pay", async (req, res) => {
-    try {
-      const record = await storage.updateIndemnity(req.params.empId, {
-        status: "Paid",
-        indemnity_amount: req.body?.indemnity_amount, // optional override
-      });
-      if (!record) return res.status(404).json({ error: "Indemnity record not found" });
-      res.json(record);
-    } catch (err) {
-      res.status(500).json({ error: "Failed to mark indemnity paid" });
-    }
-  });
   
-  app.get("/api/leaves", async (req, res) => {
+  app.get("/api/leaves", authenticateJWT, async (req, res) => {
     try {
       const status = req.query.status as string | undefined;
       const leaves = await storage.getLeaves(status);
@@ -566,7 +530,7 @@ app.post("/api/payroll/generate", async (req, res) => {
     }
   });
   
-  app.get("/api/leaves/employee/:empId", async (req, res) => {
+  app.get("/api/leaves/employee/:empId", authenticateJWT, async (req, res) => {
     try {
       const leaves = await storage.getLeavesByEmployee(req.params.empId);
       res.json(leaves);
@@ -575,7 +539,7 @@ app.post("/api/payroll/generate", async (req, res) => {
     }
   });
   
-  app.get("/api/leaves/:id", async (req, res) => {
+  app.get("/api/leaves/:id", authenticateJWT, async (req, res) => {
     try {
       const leave = await storage.getLeave(parseInt(req.params.id));
       if (!leave) {
@@ -587,7 +551,7 @@ app.post("/api/payroll/generate", async (req, res) => {
     }
   });
   
-  app.post("/api/leaves", async (req, res) => {
+  app.post("/api/leaves", authenticateJWT, async (req, res) => {
     try {
       const data = insertLeaveSchema.parse(req.body);
       const leave = await storage.createLeave(data);
@@ -600,7 +564,7 @@ app.post("/api/payroll/generate", async (req, res) => {
     }
   });
   
-  app.patch("/api/leaves/:id/approve", async (req, res) => {
+  app.patch("/api/leaves/:id/approve", authenticateJWT, async (req, res) => {
     try {
       const leave = await storage.updateLeave(parseInt(req.params.id), {
         status: "Approved",
@@ -616,7 +580,7 @@ app.post("/api/payroll/generate", async (req, res) => {
     }
   });
   
-  app.patch("/api/leaves/:id/reject", async (req, res) => {
+  app.patch("/api/leaves/:id/reject", authenticateJWT, async (req, res) => {
     try {
       const leave = await storage.updateLeave(parseInt(req.params.id), {
         status: "Rejected",
@@ -632,7 +596,7 @@ app.post("/api/payroll/generate", async (req, res) => {
     }
   });
   
-  app.get("/api/indemnity", async (req, res) => {
+  app.get("/api/indemnity", authenticateJWT, async (req, res) => {
     try {
       const indemnity = await storage.getIndemnity();
       res.json(indemnity);
@@ -641,7 +605,7 @@ app.post("/api/payroll/generate", async (req, res) => {
     }
   });
   
-  app.get("/api/reports", async (req, res) => {
+  app.get("/api/reports", authenticateJWT, async (req, res) => {
     try {
       const month = (req.query.month as string | undefined) || "";
       if (!month) return res.status(400).json({ error: "month query param (MM-YYYY) is required" });
@@ -719,7 +683,7 @@ app.post("/api/payroll/generate", async (req, res) => {
     }
   });
 
-  app.get("/api/indemnity/:empId", async (req, res) => {
+  app.get("/api/indemnity/:empId", authenticateJWT, async (req, res) => {
     try {
       const indemnity = await storage.getIndemnityByEmployee(req.params.empId);
       if (!indemnity) {
@@ -731,7 +695,7 @@ app.post("/api/payroll/generate", async (req, res) => {
     }
   });
   
-  app.post("/api/indemnity/calculate", async (req, res) => {
+  app.post("/api/indemnity/calculate", authenticateJWT, async (req, res) => {
     try {
       const employees = await storage.getEmployees();
       const indemnityRecords = [];
@@ -781,7 +745,7 @@ app.post("/api/payroll/generate", async (req, res) => {
     }
   });
   
-  app.patch("/api/indemnity/:empId/pay", async (req, res) => {
+  app.patch("/api/indemnity/:empId/pay", authenticateJWT, async (req, res) => {
     try {
       const indemnity = await storage.updateIndemnity(req.params.empId, {
         status: "Paid",

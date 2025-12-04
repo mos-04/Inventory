@@ -5,6 +5,7 @@ import { Upload, CheckCircle2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AttendancePreviewTable } from "@/components/AttendancePreviewTable";
 import { parseAttendanceFile } from "@/lib/attendanceParser";
+import { apiFetch } from "@/lib/apiFetch";
 import type { AttendanceRecord } from "@/types/attendance";
 // Note: We do not persist anything during upload; saving happens on Confirm.
 
@@ -28,7 +29,7 @@ export default function AttendanceUpload({ selectedMonth, onUpload }: Attendance
   useEffect(() => {
     async function loadEmployees() {
       try{
-        const res = await fetch("/api/employees", {credentials: "include"});
+        const res = await apiFetch("/api/employees");
         if (res.ok) {
           const data = await res.json();
           setEmployees(new Set(data.map((e: any) => e.emp_id)));

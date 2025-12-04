@@ -68,8 +68,8 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4 border-b">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-md bg-primary flex items-center justify-center">
-            <span className="text-lg font-bold text-primary-foreground">HR</span>
+          <div className="h-15 w-15 rounded-md bg-primary flex items-center justify-center">
+            <span className="text-lg font-bold text-primary-foreground">Apex</span>
           </div>
           <div>
             <h2 className="text-base font-semibold">Payroll System</h2>

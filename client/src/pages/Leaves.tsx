@@ -3,6 +3,7 @@ import LeaveRequestForm from "@/components/LeaveRequestForm";
 import LeaveRequestsTable from "@/components/LeaveRequestsTable";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { apiFetch } from "@/lib/apiFetch";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +37,7 @@ export default function Leaves() {
   async function loadLeaves(status?: string) {
     try {
       const url = status ? `/api/leaves?status=${encodeURIComponent(status)}` : "/api/leaves";
-      const res = await fetch(url, { credentials: "include" });
+      const res = await apiFetch(url);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setRequests(Array.isArray(data) ? data : []);
@@ -50,7 +51,7 @@ export default function Leaves() {
     // Load employees for name mapping
     (async () => {
       try {
-        const res = await fetch("/api/employees", { credentials: "include" });
+        const res = await apiFetch("/api/employees");
         const list = res.ok ? await res.json() : [];
         const map: Record<string, { name: string }> = {};
         (list || []).forEach((e: any) => { map[e.emp_id] = { name: e.name }; });
@@ -63,7 +64,7 @@ export default function Leaves() {
 
   const handleApprove = async (id: number) => {
     try {
-      const res = await fetch(`/api/leaves/${id}/approve`, { method: "PATCH", credentials: "include" });
+      const res = await apiFetch(`/api/leaves/${id}/approve`, { method: "PATCH" });
       if (!res.ok) throw new Error(await res.text());
       await loadLeaves();
     } catch (err) {
@@ -74,7 +75,7 @@ export default function Leaves() {
 
   const handleReject = async (id: number) => {
     try {
-      const res = await fetch(`/api/leaves/${id}/reject`, { method: "PATCH", credentials: "include" });
+      const res = await apiFetch(`/api/leaves/${id}/reject`, { method: "PATCH" });
       if (!res.ok) throw new Error(await res.text());
       await loadLeaves();
     } catch (err) {
@@ -103,10 +104,8 @@ export default function Leaves() {
       status: "Pending",
     };
     try {
-      const res = await fetch("/api/leaves", {
+      const res = await apiFetch("/api/leaves", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(await res.text());

@@ -36,7 +36,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-semibold mb-2">Apex Inventory</h1>
+        <h1 className="text-3xl font-semibold mb-2">APEX Intl.</h1>
       </div>
 
       <DashboardStats />

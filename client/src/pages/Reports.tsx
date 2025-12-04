@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/apiFetch";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -42,8 +43,8 @@ export default function Reports() {
 
       try {
         const [attendanceRes, payrollRes] = await Promise.all([
-          fetch("/api/attendance", { credentials: "include" }),
-          fetch("/api/payroll", { credentials: "include" })
+          apiFetch("/api/attendance"),
+          apiFetch("/api/payroll")
         ]);
 
         const attendanceData = attendanceRes.ok ? await attendanceRes.json() : [];
@@ -139,9 +140,7 @@ export default function Reports() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/reports?month=${encodeURIComponent(selectedMonth)}`, {
-          credentials: "include",
-        });
+        const res = await apiFetch(`/api/reports?month=${encodeURIComponent(selectedMonth)}`);
         if (!res.ok) {
           const errorText = await res.text();
           throw new Error(errorText || "Failed to load report");

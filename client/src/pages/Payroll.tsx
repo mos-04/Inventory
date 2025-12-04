@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import PayrollTable from "@/components/PayrollTable";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/apiFetch";
 import {
   Select,
   SelectContent,
@@ -30,8 +31,8 @@ useEffect(() => {
     try {
       // Fetch existing data from attendance & payroll tables
       const [attendanceRes, payrollRes] = await Promise.all([
-        fetch("/api/attendance", { credentials: "include" }),
-        fetch("/api/payroll", { credentials: "include" })
+        apiFetch("/api/attendance"),
+        apiFetch("/api/payroll")
       ]);
 
       const attendanceData = attendanceRes.ok ? await attendanceRes.json() : [];
@@ -149,9 +150,7 @@ function formatMonthLabel(monthStr: string) {
     async function fetchPayroll() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/payroll?month=${encodeURIComponent(selectedMonth)}`, {
-          credentials: "include",
-        });
+        const res = await apiFetch(`/api/payroll?month=${encodeURIComponent(selectedMonth)}`);
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         setPayrollData(Array.isArray(data) ? data : []);
@@ -184,10 +183,8 @@ function formatMonthLabel(monthStr: string) {
 
     setCalculating(true);
     try {
-      const res = await fetch("/api/payroll/generate", {
+      const res = await apiFetch("/api/payroll/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ month: selectedMonth }),
       });
       
@@ -211,9 +208,7 @@ function formatMonthLabel(monthStr: string) {
       alert(message);
       
       // Refresh payroll data
-      const listRes = await fetch(`/api/payroll?month=${encodeURIComponent(selectedMonth)}`, {
-        credentials: "include",
-      });
+      const listRes = await apiFetch(`/api/payroll?month=${encodeURIComponent(selectedMonth)}`);
       if (listRes.ok) {
         const data = await listRes.json();
         setPayrollData(Array.isArray(data) ? data : []);
@@ -232,9 +227,7 @@ function formatMonthLabel(monthStr: string) {
     
     setLoading(true);
     try {
-      const res = await fetch(`/api/payroll?month=${encodeURIComponent(selectedMonth)}`, {
-        credentials: "include",
-      });
+      const res = await apiFetch(`/api/payroll?month=${encodeURIComponent(selectedMonth)}`);
       if (res.ok) {
         const data = await res.json();
         setPayrollData(Array.isArray(data) ? data : []);
@@ -254,10 +247,8 @@ function formatMonthLabel(monthStr: string) {
     try {
       // Update each payroll record
       for (const row of data) {
-        const res = await fetch(`/api/payroll/${row.emp_id}`, {
+        const res = await apiFetch(`/api/payroll/${row.emp_id}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
           body: JSON.stringify({
             month: selectedMonth,
             basic_salary: row.basic_salary,

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import IndemnityTable from "@/components/IndemnityTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/apiFetch";
 import { DollarSign, TrendingUp, Users, Calculator, RefreshCw } from "lucide-react";
 
 interface EmployeeLite {
@@ -29,8 +30,8 @@ export default function Indemnity() {
     setLoading(true);
     try {
       const [indRes, empRes] = await Promise.all([
-        fetch("/api/indemnity", { credentials: "include" }),
-        fetch("/api/employees", { credentials: "include" }),
+        apiFetch("/api/indemnity"),
+        apiFetch("/api/employees"),
       ]);
       const indemnity = indRes.ok ? await indRes.json() : [];
       const emps = empRes.ok ? await empRes.json() : [];
@@ -77,9 +78,8 @@ export default function Indemnity() {
 
     setCalculating(true);
     try {
-      const res = await fetch("/api/indemnity/calculate", {
+      const res = await apiFetch("/api/indemnity/calculate", {
         method: "POST",
-        credentials: "include",
       });
 
       if (!res.ok) {
@@ -104,9 +104,8 @@ export default function Indemnity() {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`/api/indemnity/${empId}/pay`, {
+      const res = await apiFetch(`/api/indemnity/${empId}/pay`, {
         method: "PATCH",
-        credentials: "include",
       });
 
       if (!res.ok) {

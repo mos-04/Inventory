@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import AttendanceUpload from "@/components/AttendanceUpload";
 import { Label } from "@/components/ui/label";
+import { apiFetch } from "@/lib/apiFetch";
 import {
   Select,
   SelectContent,
@@ -24,8 +25,8 @@ useEffect(() => {
     try {
       // Fetch existing data from attendance & payroll tables
       const [attendanceRes, payrollRes] = await Promise.all([
-        fetch("/api/attendance", { credentials: "include" }),
-        fetch("/api/payroll", { credentials: "include" })
+        apiFetch("/api/attendance"),
+        apiFetch("/api/payroll")
       ]);
 
       const attendanceData = attendanceRes.ok ? await attendanceRes.json() : [];

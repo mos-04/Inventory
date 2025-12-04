@@ -3,6 +3,7 @@ import EmployeeTable from "@/components/EmployeeTable";
 import EmployeeForm from "@/components/EmployeeForm";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { apiFetch } from "@/lib/apiFetch";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +43,7 @@ export default function Employees() {
 
   async function loadEmployees() {
     try {
-      const res = await fetch("/api/employees", { credentials: "include" });
+      const res = await apiFetch("/api/employees");
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       
@@ -88,9 +89,8 @@ export default function Employees() {
     if (!confirmed) return;
 
     try {
-      const res = await fetch(`/api/employees/${encodeURIComponent(empId)}`, {
+      const res = await apiFetch(`/api/employees/${encodeURIComponent(empId)}`, {
         method: "DELETE",
-        credentials: "include",
       });
       if (!res.ok) throw new Error(await res.text());
       alert("Employee deleted successfully");
@@ -126,19 +126,15 @@ export default function Employees() {
 
     try {
       if (editingEmployee) {
-        const res = await fetch(`/api/employees/${encodeURIComponent(editingEmployee.emp_id)}`, {
+        const res = await apiFetch(`/api/employees/${encodeURIComponent(editingEmployee.emp_id)}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error(await res.text());
         alert("Employee updated successfully");
       } else {
-        const res = await fetch("/api/employees", {
+        const res = await apiFetch("/api/employees", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
           body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error(await res.text());
