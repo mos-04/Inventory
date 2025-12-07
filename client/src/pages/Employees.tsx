@@ -13,7 +13,6 @@ import {
 
 type AllowanceType = "per_day" | "fixed" | "none";
 
-// FIXED: Ensure all properties are properly typed and optional where needed
 interface EmployeeRow {
   emp_id: string;
   name: string;
