@@ -353,6 +353,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to update payroll" });
     }
   });
+app.post("/api/employees/bulk", async (req, res) => {
+  try {
+    const { employees } = req.body;
+    if (!Array.isArray(employees) || employees.length === 0) {
+      return res.status(400).json({ error: "employees array is required" });
+    }
+
+    const created: any[] = [];
+
+    for (const [index, raw] of employees.entries()) {
+      try {
+        const payload = {
+          emp_id: String(raw.emp_id),
+          name: raw.name,
+          civil_id: raw.civil_id || null,
+          designation: raw.designation,
+          department: raw.department,
+          category: raw.category || "Direct",
+          doj: raw.doj,
+          internal_department_doj: raw.internal_department_doj || null,
+  five_year_calc_date: null,
+          basic_salary: String(raw.basic_salary ?? 0),
+          other_allowance: String(raw.other_allowance ?? 0),
+          ot_rate_normal: String(0),
+          ot_rate_friday: String(0),
+          ot_rate_holiday: String(0),
+          food_allowance_type: raw.food_allowance > 0 ? "fixed" : "none",
+          food_allowance_amount: String(raw.food_allowance ?? 0),
+          working_hours: raw.working_hours ?? 8,
+          indemnity_rate: String(raw.indemnity_rate ?? 15),
+          status: "active",
+        };
+
+        console.log("Row", index, "payload:", payload);
+        const data = insertEmployeeSchema.parse(payload);
+        const employee = await storage.createEmployee(data);
+        created.push(employee);
+      } catch (err) {
+        console.error("Error on row", index, raw.emp_id, err);
+        // return first error to client for debugging
+        return res.status(400).json({ row: index, emp_id: raw.emp_id, error: String(err) });
+      }
+    }
+
+    res.json({ count: created.length, created });
+  } catch (err) {
+    console.error("Bulk employees upload error (outer):", err);
+    res.status(500).json({ error: "Failed to bulk create employees", details: String(err) });
+  }
+});
 
 app.post("/api/payroll/generate", async (req, res) => {
   try {
