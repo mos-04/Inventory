@@ -63,6 +63,60 @@ async function enrichPayrollRows(payroll: Payroll[], month?: string): Promise<Pa
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
+  // Authentication routes
+  app.post("/api/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).send("Username and password required");
+      }
+
+      // Simple authentication (in production, use proper password hashing)
+      // For now, accept any username with password "admin@123"
+      if (password === "admin@123") {
+        // Set session/cookie
+        res.cookie("auth", "true", { 
+          httpOnly: true, 
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          sameSite: "lax"
+        });
+        res.json({ success: true, username });
+      } else {
+        res.status(401).send("Invalid credentials");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).send("Login failed");
+    }
+  });
+
+  app.post("/api/logout", async (req, res) => {
+    try {
+      // Clear auth cookie
+      res.clearCookie("auth");
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Logout error:", error);
+      res.status(500).send("Logout failed");
+    }
+  });
+
+  app.get("/api/auth/check", async (req, res) => {
+    try {
+      // Check if auth cookie exists
+      const authCookie = req.cookies?.auth;
+      if (authCookie === "true") {
+        res.json({ authenticated: true });
+      } else {
+        res.status(401).json({ authenticated: false });
+      }
+    } catch (error) {
+      console.error("Auth check error:", error);
+      res.status(500).json({ authenticated: false });
+    }
+  });
+
 //   app.get("/api/health/db", async (req, res) => {
 //   try {
 //     const url = process.env.DATABASE_URL;

@@ -61,7 +61,22 @@ const menuItems = [
 ];
 
 export function AppSidebar() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+      // Redirect to login page
+      setLocation("/login");
+    } catch (err) {
+      console.error("Logout error:", err);
+      // Still redirect on error
+      setLocation("/login");
+    }
+  };
 
   return (
     <Sidebar>
@@ -100,7 +115,7 @@ export function AppSidebar() {
       <SidebarFooter className="p-4 border-t">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={() => console.log('Logout clicked')} data-testid="button-logout">
+            <SidebarMenuButton onClick={handleLogout} data-testid="button-logout">
               <LogOut className="h-4 w-4" />
               <span>Logout</span>
             </SidebarMenuButton>

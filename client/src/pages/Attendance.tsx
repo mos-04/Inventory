@@ -46,8 +46,18 @@ useEffect(() => {
       const existingMonths: { value: string; label: string; date: Date }[] = [];
       allMonthsSet.forEach(monthStr => {
         try {
-          const [mm, yyyy] = monthStr.split('-');
-          const date = new Date(parseInt(yyyy), parseInt(mm) - 1, 1);
+          // Only accept MM-YYYY format (e.g., "12-2025")
+          const parts = monthStr.split('-');
+          if (parts.length !== 2) return;
+          
+          const [mm, yyyy] = parts;
+          const monthNum = parseInt(mm);
+          const yearNum = parseInt(yyyy);
+          
+          // Validate month (1-12) and year (4 digits)
+          if (monthNum < 1 || monthNum > 12 || yearNum < 2000 || yearNum > 2100) return;
+          
+          const date = new Date(yearNum, monthNum - 1, 1);
           const label = `${monthNames[date.getMonth()]} ${yyyy}`;
           existingMonths.push({ 
             value: `${mm.padStart(2, '0')}-${yyyy}`, 
@@ -64,7 +74,7 @@ useEffect(() => {
         const date = new Date(currentYear, month - 1, 1);
         const mm = String(month).padStart(2, "0");
         const yyyy = currentYear;
-        const value = `${yyyy}-${mm}`;
+        const value = `${mm}-${yyyy}`;
         const label = `${monthNames[month - 1]} ${yyyy}`;
         
         existingMonths.push({ value, label, date });
@@ -75,7 +85,7 @@ useEffect(() => {
         const date = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
         const mm = String(date.getMonth() + 1).padStart(2, "0");
         const yyyy = date.getFullYear();
-        const value = `${yyyy}-${mm}`;
+        const value = `${mm}-${yyyy}`;
         const label = `${monthNames[date.getMonth()]} ${yyyy}`;
         existingMonths.push({ value, label, date });
       }
@@ -92,7 +102,7 @@ useEffect(() => {
       setMonths(cleanMonths);
 
       // Set current month as default
-      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const currentMonth = `${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`;
       setSelectedMonth(currentMonth);
 
     } catch (error) {
@@ -114,19 +124,19 @@ useEffect(() => {
 
     for (let month = 1; month <= 12; month++) {
       const mm = String(month).padStart(2, "0");
-      const value = `${currentYear}-${mm}`;
+      const value = `${mm}-${currentYear}`;
       const label = `${monthNames[month - 1]} ${currentYear}`;
       allMonths.push({ value, label });
     }
     setMonths(allMonths);
-    setSelectedMonth(`${currentYear}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+    setSelectedMonth(`${String(now.getMonth() + 1).padStart(2, "0")}-${currentYear}`);
   }
 
   generateMonths();
 }, []);
 function formatMonthLabel(monthStr: string) {
   if (!monthStr) return "";
-  const [yyyy, mm] = monthStr.split("-");
+  const [mm, yyyy] = monthStr.split("-");
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December",
