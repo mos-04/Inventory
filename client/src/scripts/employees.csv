@@ -1,0 +1,146 @@
+﻿Sl No,"Employee 
+No.",Employee Name,Designation,Civil id #,Date of Birth,Monthly Salary,Food Allowance,Other Allowance,Department,DOJ,DOJ to internal departments,5 year calculation,Indemnity to be calculated @,Working hrs,Category
+1,643,Arbind Kumar Mahato,Helper,2.83063E+11,30/06/1983,80,25,,EWC,26/04/2024,,26-Apr,15,8,Direct 
+2,1198,Barre Suresh,Electrical Technician,2.90021E+11,10/02/1990,160,25,,EWC,16/09/2024,,16-Sep,15,8,Direct 
+3,601,Raj Deb Mahara,Helper,2.87012E+11,19/01/1987,80,25,,EWC,13/04/2024,,13-Apr,15,8,Direct 
+4,1150,Shenoda Wadi Andrawes Ibrahim,Project Engineer E&I,2.8404E+11,04/01/1984,1000,,,EWC,01/11/2022,,1-Nov,15,10,Indirect
+5,595,Mukti Prasad Bhattarai,Mechanic,2.86113E+11,30/11/1986,100,25,,EWC,13/04/2024,,13-Apr,15,8,Direct 
+6,600,Prem Lal Tharu,Grinder,2.84051E+11,10/05/1984,90,25,,EWC,13/04/2024,,13-Apr,15,8,Direct 
+7,518,Mhabir Yadav,Helper,2.98071E+11,10/07/1998,90,25,,EWC,06/06/2022,,6-Jun,15,8,Direct 
+8,8023,Abdussamd Mailamparampath  ,Driver (Trailer),2.72041E+11,10/04/1972,225,,25,EWC,21/11/2015,,21-Nov,30,10,Direct 
+9,678, Jameel Mohammad mustafa Ahmad ,Electrician,2.8701E+11,01/01/1987,175,25,,EWC,16/08/2025,,16-Aug,15,8,Direct
+10,1145,Abdul samad Mohamed Ali,Mechanical Supervisor,2.89072E+11,17/07/1989,300,,50,Flow Line,09/11/2022,,9-Nov,15,8,Indirect
+11,467,Abul Hadis Sona Mia,Helper,2.8801E+11,01/01/1988,100,25,,Flow Line,06/08/2019,,6-Aug,30,8,Direct
+12,589,Al Amin Abdul khale,Helper,2.86061E+11,10/06/1986,90,25,,Flow Line,06/04/2024,,6-Apr,15,8,Direct
+13,366,Arunbhai Dhirubhai Patel,Welder,2.8006E+11,01/06/1980,195,25,,Flow Line,20/12/2015,,20-Dec,30,8,Direct
+14,587,Chan miya khalil miya,Helper,2.8401E+11,01/01/1984,90,25,,Flow Line,07/04/2024,,7-Apr,15,8,Direct
+15,593,Chandan Tharu,Grinder,3.00052E+11,18/05/2000,90,25,,Flow Line,13/04/2024,,13-Apr,15,8,Direct 
+16,8137,Dajangbu Sherpa,Operator,2.85091E+11,13-Sep,190,25,60,Logistics,08/01/2019,,8-Jan,30,10,Direct
+17,615,Dukhi Thakur,Asst Pipe Fitter,2.83053E+11,25/05/1983,95,25,,Flow Line,16/04/2024,,16-Apr,15,8,Direct 
+18,674,Indira Kumar Adhikari,Heavy Driver,2.78091E+11,08/09/1978,150,25,,Logistics,21/06/2024,,21-Jun,15,8,Direct 
+19,1065,Jagadhish Sethumadhavan,Hr And Admin Manager,2.74052E+11,20/05/1974,650,25,,Flow Line,24/07/2015,,24-Jul,30,8,Indirect
+20,660,Jaswinder singh,Heavy Driver,2.88061E+11,13/06/1988,225,25,,Logistics,03/06/2024,,3-Jun,15,10,Direct
+21,655,Jit Bahadur Lamichan Magar ,DRIVER,2.76051E+11,14/05/1976,150,25,,SABIC,04/05/2024,,4-May,15,8,Direct 
+22,658,Lakhveer singh,Heavy Driver,2.77121E+11,11/12/1977,225,25,,SABIC,25/05/2024,,25-May,15,10,Direct 
+23,602,Mahesh Chamar ,Asst Pipe Fitter,2.91112E+11,17/11/1991,100,25,,Flow Line,13/04/2024,,13-Apr,15,8,Direct 
+24,8047,Mani Pillai Murugan,Operator,2.75071E+11,12/07/1975,300,,,Logistics,18/11/2016,,18-Nov,30,10,Direct
+25,216,Mathyazhagan Rayadurai,Barbender,2.74061E+11,06/06/1974,140,25,,Flow Line,16/10/2014,,16-Oct,30,8,Direct
+26,462,Md Sumon Nurislam,Helper,2.9004E+11,03/04/1990,100,25,,Flow Line,06/08/2019,,6-Aug,30,8,Direct
+27,1170,Md Zafar Alam,Mechanical Foreman,2.9101E+11,03/01/1991,225,25,,Flow Line,06/02/2024,,6-Feb,15,10,Indirect
+28,673,Mohamed Hanifa Imman Ali,Operator,2.72053E+11,27/05/1972,275,25,,Flow Line,18/07/2024,,18-Jul,15,10,Direct
+29,211,Mohammed Khurshid Alam,Electrician,2.72051E+11,13/05/1972,150,25,,Flow Line,01/10/2014,,1-Oct,30,8,Direct
+30,8136,Pappu Kumar Sah,Heavy Driver,2.94092E+11,24/09/1994,250,25,,Flow Line,08/01/2019,,8-Jan,30,10,Direct
+31,386,Paranjothi,Welder,2.84051E+11,07/05/1984,195,25,,Flow Line,28/01/2017,,28-Jan,30,8,direct
+32,1056,Parthasarathy Vaidyanathan Samy,Project Manager,2.67073E+11,08/07/1967,2100,,,Flow Line,08/06/2015,,8-Jun,30,8,Indirect
+33,654,Rabindra Bista ,OPERATOR ,2.91121E+11,11/12/1991,150,25,,Logistics,04/05/2024,,4-May,15,8,Direct 
+34,609,RamRatan Yadav,Pipe Fabricator,2.81052E+11,19/05/1981,145,25,,Flow Line,16/04/2024,,16-Apr,15,8,Direct 
+35,1032,Rejith Koroth,Document Controller,2.86052E+11,22/05/1986,600,,,Flow Line,22/11/2014,,22-Nov,30,8,Indirect
+36,470,Rubel Abdul Helim,Helper,2.79041E+11,08/04/1979,100,25,,Flow Line,17/09/2019,,17-Sep,30,8,Direct
+37,632,Santu Kapari,Helper,3.00073E+11,28/07/2000,80,25,,Flow Line,22/04/2024,,22-Apr,15,8,Direct 
+38,419,Saranraj,Mason,2.90022E+11,22/02/1990,135,25,,Flow Line,22/06/2018,,22-Jun,30,8,Direct
+39,221,Saravanamurugan Paramasivan,Foreman,2.77052E+11,24/05/1977,325,25,,Flow Line,21/11/2014,,21-Nov,30,8,Indirect
+40,275,Saravanan Kaliyan ,Pipe Fitter,2.77071E+11,05/07/1977,210,25,,Flow Line,29/05/2015,,29-May,30,8,Direct
+41,636,Saroj Kumar Yadav,Grinder Helper,2.82051E+11,05/05/1982,90,25,,Flow Line,22/04/2024,,22-Apr,15,8,Direct 
+42,564,Shabeek Shamsudeen,Lt.Driver,2.72041E+11,09/04/1972,140,25,,Logistics,18/02/2023,,18-Feb,15,8,Direct
+43,8130,Shaju Joseph Ambattil,Heavy Driver,2.69052E+11,22/05/1969,225,25,,Logistics,15/10/2017,,15-Oct,30,10,Direct
+44,1039,Sivaraj Kandankumarath Menon,Finance Manager,2.72023E+11,27/02/1972,925,,50,Flow Line,25/11/2014,,25-Nov,30,8,Indirect
+45,497,Sudhakar,Mechanic,2.85051E+11,07/05/1985,175,25,,Flow Line,08/02/2020,,8-Feb,30,8,Direct
+46,471,Sumon Mohammed Babur Ali,Helper,2.8008E+11,02/08/1980,100,25,,Flow Line,17/09/2019,,17-Sep,30,8,Direct
+47,252,Venugopal  Vellaiyan Vellaiyan,Mason,2.77051E+11,05/06/1977,140,25,,Flow Line,05/05/2015,,5-May,30,8,Direct
+48,1201,Mohammed Hanif Baigampalli,Technical Assistant,2.69041E+11,12/04/1069,250,25,,Flow Line,16/11/2024,,16-Nov,15,10,Indirect
+49,1202,Sekhar Sivathanu Pillai Anantham,WELDING INSPECTOR,2.66051E+11,06/05/1966,550,,,Flow Line,11/01/2025,,11-Jan,15,10,Indirect
+50,1195,Anjali Ravi,HR officer,,,250,,,Flow Line,24/08/2024,,24-Aug,15,8,Indirect
+51,8010,Basheer Thomarassery Muhammed,Operator,2.6801E+11,1-Jan,300,,20,Logistics,01/05/2013,,1-May,30,10,Direct
+52,1085,Abdul Saleem Chandana Purath,Warehouse,2.71051E+11,10/05/1971,335,25,50,Logistics,01/04/2013,,1-Apr,30,10,Direct
+53,8007,Abdulkadar Jailani Mohammed Mustafa,Heavy Driver,2.65042E+11,23/04/1965,295,,,Logistics,01/08/2012,,1-Aug,30,10,Direct
+54,8110,Abulaish Miya,Steel Painter,2.81112E+11,24/11/1981,120,25,,Logistics,29/08/2017,,29-Aug,30,10,Direct
+55,7006,Anish Kumar Valukalayil Kuttappan,Lt. Driver,2.80053E+11,25/05/1980,325,25,100,Logistics,01/05/2013,,1-May,30,8,Direct
+56,7018,Faizal Ummarchintavida Hamsa,Accountant,2.86081E+11,06/08/1986,425,25,125,Logistics,21/03/2016,,21-Mar,30,8,Indirect
+57,8147,Gitakumar Gurung,Operator,2.81062E+11,24/06/1981,180,25,25,Logistics,01/03/2019,,1-Mar,30,10,Direct
+58,8016,Harbhjan Singh Lakhmir Singh,Heavy Driver,2.70042E+11,23/04/1970,270,,,Logistics,23/03/2014,,23-Mar,30,10,Direct
+59,8194,Haris Manharodan,Light driver,2.841E+11,02/10/1984,150,25,20,Logistics,21/05/2023,,21-May,15,10,Direct
+60,7011,Harshad Thathamma Prambil,Accountant,2.90012E+11,17/01/1990,650,,,Logistics,24/11/2014,,24-Nov,30,8,Indirect
+61,493,Homiun Kabir Nagar Ali,Security Guard,2.85121E+11,10/12/1985,120,25, ,Logistics,19/11/2019,,19-Nov,30,10,Direct
+62,507,Jarnail Singh,Helper Cum Asst.Mason,2.8004E+11,02/04/1980,120,25,50,Logistics,26/03/2020,,26-Mar,30,10,Direct
+63,8171,Jaswir Singh,Hydrolic Mechanic,2.83052E+11,23/05/1983,330,,,Logistics,01/09/2019,,0-Jan,30,10,Direct
+64,8155,Kalamul Haque ,Helper ,2.8101E+11,04/01/1981,120,25,50,Logistics,13/02/2019,,13-Feb,30,10,Direct
+65,8107,Kumar Khadka,Helper,2.81041E+11,14/04/1981,130,25, ,Logistics,28/08/2017,,28-Aug,30,10,Direct
+66,8089,Manikantan Karippottil,Operator,2.71011E+11,8-Jan,275,,20,Logistics,22/07/2017,,22-Jul,30,10,Direct
+67,7007,Mohamed Sabu,Sales Manager,2.87103E+11,30/10/1987,975,,25,Logistics,15/03/2014,,15-Mar,30,8,Indirect
+68,8090,Mohammad Alfateh Esam Naseraldeen Hamed,"Resource 
+Co Ordinator",2.8101E+11,01/01/1981,500,,,Logistics,11/10/2011,,11-Oct,30,8,Indirect
+69,7010,Mohammad Mohammad Rasho,Mandoop,2.5501E+11,01/01/1955,200,,,Logistics,01/09/2015,,1-Sep,30,8,Direct
+70,8106,Mohammad Sarif Ansari,Security Guard,2.91042E+11,23/04/1991,120,25,50,Logistics,28/08/2017,,28-Aug,30,10,Direct
+71,7034,Nabeel Kunhimarakkar ,Sales Cordinator,2.83053E+11,31/05/1983,300,25,,Logistics,12/08/2022,,12-Aug,15,10,Direct
+72,8190,Natarajan Suresh Natarajan,Lt.Driver,2.71053E+11,31/05/1971,175,25,,Logistics,26/11/2022,,26-Nov,15,10,Direct
+73,8134,Parmjit Singh Raj Tapinder Dass,Heavy Driver,2.70012E+11,24/01/1970,325,,,Logistics,01/02/2019,,1-Feb,30,10,Direct
+74,8153,Ramesh Jami ,Helper,2.84083E+11,25/08/1984,120,25,50,Logistics,23/02/2019,,23-Feb,30,10,Direct
+75,8168,Ravi Kumar Madan Lal,Operator,2.81032E+11,23/03/1981,300,,,Logistics,15/05/2019,,15-May,30,10,Direct
+76,8088,Rawoot Azeem Ismail,"Driver/
+Helper
+",2.78111E+11,07/11/1988,260,,,Logistics,04/07/2018,,4-Jul,30,8,Direct
+77,391,Rejeesh Poliyodath Kuttan,Storekeeper,2.8805E+11,03/05/1988,120,25,,Logistics,18/04/2017,,18-Apr,30,10,Direct
+78,8083,Seetharaman Venatesan Venatesan,Operator,2.63062E+11,15/06/1963,300,,,Logistics,07/04/2017,,7-Apr,30,10,Direct
+79,7031,Shabeeb Chandanath,Business Development Executive,2.86032E+11,22/03/1986,275,25,50,Logistics,17/04/2019,,17-Apr,30,8,Direct
+80,7027,Yasir Osam Nseraldin Hamed ,Hr Officer,2.8801E+11,01/01/1988,300,25,,Logistics,01/11/2016,,1-Nov,30,8,Indirect
+81,192,Sajeev Puthiya Punathil,Office Boy,2.78052E+11,20/05/1978,225,25,,Logistics,22/04/2014,,22-Apr,30,10,Direct
+82,566,Sakkeer Puthiya Punathil,Lt.Driver,2.79031E+11,08/03/1979,140,25,,Logistics,19/11/2022,,19-Nov,15,10,Direct
+83,599,Dewanand Tharu,Grinder,3.0208E+11,03/08/2002,90,25,,Rehab,13/04/2024,,13-Apr,15,8,Direct 
+84,459,Mohammad Ismail Abul Masum,Helper,2.8305E+11,01/05/1983,100,25,,Rehab,21/07/2019,,21-Jul,30,8,Direct
+85,468,Salim Miah Safijal Islam,Helper,2.87023E+11,25/02/1987,100,25,,Rehab,06/08/2019,,6-Aug,30,8,Direct
+86,1156,Abdelatty ali Mohammadein Hassanein,Civil supervisor,2.76031E+11,3/14/1976,350,,,Rehab,25/10/2023,,25-Oct,15,10,Indirect
+87,1135,Abdulaziz Yousef Abdallah Al Yousafi ,Area co-ordinator,2.90013E+11,29/01/1990,700,25,25,Rehab,10/10/2022,,10-Oct,15,10,Indirect
+88,7012,Ahmad Abdullah Alhajji,Mandoop,2.6611E+11,03/11/1966,400,,25,Rehab,01/06/2015,,1-Jun,30,8,Indirect
+89,Egy-1103,Ahmed Farghal Abouelel Shehata, Excavation Labor,2.92011E+11,11/01/1992,110,25,,Rehab,21/12/2022,,21-Dec,15,8,Direct 
+90,Egy-1060,Ahmed Helmy Kassem Abdelghany,Excavation labor,2.86123E+11,28/12/1986,110,25,,Rehab,26/11/2022,,26-Nov,15,8,Direct 
+91,Egy-1065,Ahmed Maher Ahmed Abdalla,Excavation labor,2.97091E+11,07/09/1997,110,25,,Rehab,26/11/2022,,26-Nov,15,8,Direct 
+92,553,Ajay Kumar Shah,Grinderman,2.91011E+11,01/01/1991,110,25,,Rehab,10/01/2023,,10-Jan,15,8,Direct 
+93,1147,Amal Prasad,Qc Assistant,2.97102E+11,21/10/1997,200,25,,Rehab,29/11/2022,,29-Nov,15,10,Indirect
+94,8057,Anilkumar Chellappan,Mechanic,2.83032E+11,16-Mar,350,25,,Rehab,14/01/2017,,14-Jan,30,8,Direct
+95,1130,Arif Iqubal,Document controller,2.85053E+11,25/05/1985,500,25,,Rehab,15/07/2022,,15-Jul,15,8,Indirect
+96,Egy-1045,Attia Attia Ahmed,Grinderman,2.8501E+11,02/01/1985,120,25,,Rehab,16/11/2022,,16-Nov,15,8,Direct 
+97,541,Bablu Kumar Safi,6G Arc Welder,2.86052E+11,15/05/1986,160,25,,Rehab,12/01/2023,,12-Jan,15,8,Direct 
+98,570,Bharat Reddy Tipan,Rigger,2.84051E+11,05/05/1984,110,25,,Rehab,03/01/2023,,3-Jan,15,8,Direct 
+99,535,Biru Kumar Birender Rajbhar,Helper,3.01052E+11,15/05/2001,90,25,,Rehab,29/10/2022,,29-Oct,15,8,Direct 
+100,1146,Chandrabhan Yadav ,Mechanical Foreman,2.65082E+11,18/08/1965,375,25,,Rehab,22/11/2022,,22-Nov,15,10,Indirect
+101,1149,Diaaeldin Awad Elsayed Mohamed Omer Khattab,Project Manager,2.75091E+11,05/09/1975,1500,,,Rehab,22/11/2022,,22-Nov,15,10,Indirect
+102,1152,Dileep Kumar Muraleedharan Nair,Safety Officer,2.89053E+11,30/05/1989,500,,50,Rehab,01/05/2023,,1-May,15,10,Indirect
+103,550,Durgesh Bhagat,Pipe fitter,2.8205E+11,01/05/1982,130,25,,Rehab,11/01/2023,,11-Jan,15,8,Direct 
+104,528,Farzanullah ,Store Keeper,2.88121E+11,07/12/1988,140,25,,Rehab,25/10/2022,,25-Oct,15,8,Direct 
+105,1191,Gouzief Khalaf Nashed Meglaa,Mandoop,2.88112E+11,22-Nov,450,,25,Rehab,03/07/2024,,3-Jul,15,10,Indirect
+106,545,Guddu Kumar,Arc Welder,2.88012E+11,21/01/1988,160,25,,Rehab,14/01/2023,,14-Jan,15,8,Direct 
+107,237,Gurpreet Singh Balaur Singh,Heavy Driver,2.8107E+11,03/07/1981,280,,,Logistics,04/04/2015,,4-Apr,30,10,Direct 
+108,1131,Hany Aziz Ahmed Ali,Civil supervisor,2.8306E+11,01/06/1983,450,25,25,Rehab,01/12/2022,,1-Dec,15,10,Indirect
+109,Egy-1040,Hisham Hashem Abdelwahed Abdelaal,Lt.Driver,2.99032E+11,17/03/1990,140,25,,Rehab,14/11/2022,,14-Nov,15,8,Direct 
+110,Egy-1044,Hossameldin Ahmed Hassan Ibrahim,Grit Blaster,2.8809E+11,01/09/1988,150,25,,Rehab,17/11/2022,,17-Nov,15,8,Direct 
+111,Egy-1051,Ibrahim Ibrahim Abdelasset Ibrahim,Excavation labor,2.99042E+11,24/04/1999,110,25,,Rehab,14/11/2022,,14-Nov,15,8,Direct 
+112,573,Kalachand Mondal,Shuttering carpenter,2.85021E+11,12/02/1985,120,25,,Rehab,08/02/2023,,8-Feb,15,8,Direct 
+113,Egy-1101,Khalil Hassan Mohamed Hassan, Steel Fixer,2.90101E+11,10/10/1990,120,,,Rehab,10/12/2022,,10-Dec,15,8,Direct 
+114,Egy-1048,Kirellos Mouris Gebraiel Bashita,Excavation labor,3.00033E+11,26/03/2000,110,25,,Rehab,14/11/2022,,14-Nov,15,8,Direct 
+115,544,Kripanand Mishra,Arc Welder,2.8804E+11,04/04/1988,160,25,,Rehab,11/01/2023,,11-Jan,15,8,Direct 
+116,574,Krushna Chandra Pradhan,Rigger,2.8603E+11,02/03/1989,110,25,,Rehab,28/02/2023,,28-Feb,15,8,Direct 
+117,1123,Lidhina Rejith,Accountant,2.95071E+11,10/07/1995,325,,50,Rehab,01/12/2019,,1-Dec,30,8,Indirect
+118,569,Lokanath Reddy Gujju,Rigger,2.76102E+11,15/10/1976,110,25,,Rehab,31/12/2022,,31-Dec,15,8,Direct 
+119,464,M A  Hakim Abdur Rahman,Helper,2.82023E+11,27/02/1982,150,25,25,Rehab,06/08/2019,,6-Aug,30,8,Direct
+120,Egy-1046,Mahmoud Mohamed Khalil Abdelrahman,Excavation labour,2.73022E+11,19/02/1973,110,25,,Rehab,19/11/2022,,19-Nov,15,8,Direct 
+121,Egy-1049,Mohamed Khalaf Abdelmeguid Elsayed,Excavation labor,2.79031E+11,11/03/1979,110,25,,Rehab,14/11/2022,,14-Nov,15,8,Direct 
+122,8145,Mohammad Apsar,Operator,2.8308E+11,01/08/1983,200,,25,Rehab,16/02/2016,,16-Feb,30,10,Direct 
+123,8035,Mohammed Nasuddin Mohboob Alam,Operator,2.7112E+11,03/12/1971,300,,,Rehab,29/06/2016,,29-Jun,30,8,Direct
+124,557,Naushad Alam  ,Pipe Fabricator,2.7703E+11,03/03/1977,140,25,,Rehab,16/11/2022,,16-Nov,15,8,Direct 
+125,249,Pradip Kumar Das,Welder ( Uphill +Down Hill),2.7103E+11,01/03/1971,190,25,,Rehab,04/05/2015,,4-May,30,8,Direct 
+126,Egy-1067,Radwan Mohamed Ali Radwan,Excavation labor,2.92112E+11,22/11/1992,110,25,,Rehab,26/11/2022,,26-Nov,15,8,Direct 
+127,1148,Rajeev Rajan,Planner+Material Control,2.82051E+11,10/05/1982,450,25,,Rehab,29/11/2022,,29-Nov,15,10,Indirect
+128,537,Raju Prajapati,Pipe Fitter,2.99062E+11,15/06/1990,140,25,,Rehab,14/11/2022,,14-Nov,15,8,Direct 
+129,Egy-1041,Saleh Gebril Ali Abdalla, Light Duty Driver,2.87081E+11,09/08/1987,140,25,,Rehab,26/11/2022,,26-Nov,15,8,Direct 
+130,559,Satyendra Kumar ,Welder,2.87062E+11,20/06/1987,180,25,,Rehab,14/11/2022,,14-Nov,15,8,Direct 
+131,1042,Sharafuddeen Panthalayinil Tharayil,Site Co Ordinator,2.82043E+11,27/04/1982,600,,150,Rehab,01/04/2013,,1-Apr,30,8,Indirect
+132,8019,Sikander Singh Chuhar Singh Bhullar,Heavy Driver,2.79031E+11,10/03/1979,270,,,Rehab,11/11/2015,,11-Nov,30,10,Direct 
+133,Egy-1059,Tamer Maher Gaber Mahmoud,Excavation labor,2.88063E+11,27/06/1998,110,25,,Rehab,26/11/2022,,26-Nov,15,8,Direct 
+134,536,Tinku Prajapati ,Pipe Fitter,2.92103E+11,01/01/1992,140,25,,Rehab,29/10/2022,,29-Oct,15,8,Direct 
+135,560,Umesh Kumar Nishad,Welder,2.87103E+11,26/10/1987,180,25,,Rehab,14/11/2022,,14-Nov,15,8,Direct 
+136,562,Umesh Prasad,Pipe Fabricator,2.78061E+11,08/06/1978,140,25,,Rehab,19/11/2022,,19-Nov,15,8,Direct 
+137,572,Upendra Kumar Bhagat,Gas Cutter,2.78101E+11,06/10/1981,120,25,,Rehab,14/01/2023,,14-Jan,15,8,Direct 
+138,Egy-1062,Yasser Ahmed Mahmoud Mohamed,Excavation labor,2.98011E+11,08/01/1998,110,25,,Rehab,27/11/2022,,27-Nov,15,8,Direct 
+139,1154,Zubair Ahamad Abdul Kaylum,Q.A/Q.C Engineer,2.8111E+11,01/11/1981,775,,,Rehab,23/07/2023,,23-Jul,15,8,Indirect
+140,1199,Anjana V Babu,Receptionist ,2.98103E+11,25/10/1998,250,,,Rehab,31/10/2024,,31-Oct,15,8,Indirect
+141,1203,Devanarayanan R Nair,Safety Officer,2.94032E+11,15/03/1994,500,,50,Rehab,06/07/2025,,6-Jul,15,10,Indirect
