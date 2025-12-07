@@ -851,8 +851,8 @@ app.post("/api/payroll/generate", async (req, res) => {
         // Apply rounding: if decimal >= 0.5 round up, else round down
         const net_salary = Math.round(net_salary_raw);
         
-        // Calculate allowances earned: prorated other allowance + prorated food allowance
-        const allowances_earned = prorated_other + food_allow;
+        // Allowances earned: Only the prorated other allowance (food is separate column)
+        const allowances_earned = prorated_other;
         
         // Dues earned: will be calculated later, for now use persisted value or default to 0
         const dues_earned = p ? Number(p.dues_earned ?? 0) : 0;
