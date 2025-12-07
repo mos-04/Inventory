@@ -35,6 +35,7 @@ export const employees = pgTable("employees", {
   ot_rate_holiday: decimal("ot_rate_holiday", { precision: 10, scale: 2 }).notNull().default("0"),
   food_allowance_type: text("food_allowance_type").notNull().default("none"),
   food_allowance_amount: decimal("food_allowance_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+  accommodation: text("accommodation").notNull().default("Own"), // Own, Company, Camp, Souq Sabha
   working_hours: integer("working_hours").notNull().default(8),  // Fixed type
   indemnity_rate: decimal("indemnity_rate", { precision: 10, scale: 2 }).notNull().default("0"), // Add if exists
   status: text("status").notNull().default("active"),
@@ -54,6 +55,7 @@ export const attendance = pgTable("attendance", {
   ot_hours_normal: decimal("ot_hours_normal", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_hours_friday: decimal("ot_hours_friday", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_hours_holiday: decimal("ot_hours_holiday", { precision: 10, scale: 2 }).notNull().default("0"),
+  comments: text("comments"),
   uploaded_at: timestamp("uploaded_at").notNull().defaultNow(),
 });
 
@@ -72,6 +74,7 @@ export const payroll = pgTable("payroll", {
   gross_salary: decimal("gross_salary", { precision: 10, scale: 2 }).notNull(),
   deductions: decimal("deductions", { precision: 10, scale: 2 }).notNull().default("0"),
   net_salary: decimal("net_salary", { precision: 10, scale: 2 }).notNull(),
+  dues_earned: decimal("dues_earned", { precision: 10, scale: 2 }).notNull().default("0"),
   generated_at: timestamp("generated_at").notNull().defaultNow(),
 });
 

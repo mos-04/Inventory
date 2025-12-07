@@ -29,11 +29,15 @@ async function enrichPayrollRows(payroll: Payroll[], month?: string): Promise<Pa
   ]);
 
   const employeeMap = new Map(employees.map((employee) => [employee.emp_id, employee]));
-  const attendanceMap = new Map<string, { workingDays: number }>();
+  const attendanceMap = new Map<string, { workingDays: number; comments: string }>();
 
   for (const entry of attendance) {
-    const current = attendanceMap.get(entry.emp_id) ?? { workingDays: 0 };
+    const current = attendanceMap.get(entry.emp_id) ?? { workingDays: 0, comments: "" };
     current.workingDays += Number(entry.working_days ?? 0);
+    // Concatenate comments if there are multiple attendance records
+    if (entry.comments) {
+      current.comments = current.comments ? `${current.comments}; ${entry.comments}` : entry.comments;
+    }
     attendanceMap.set(entry.emp_id, current);
   }
 
@@ -56,6 +60,7 @@ async function enrichPayrollRows(payroll: Payroll[], month?: string): Promise<Pa
       working_days: workingDays,
       hours_per_day: hoursPerDay,
       scheduled_hours: scheduledHours,
+      comments: stats?.comments ?? "",
     };
   });
 }
@@ -490,32 +495,22 @@ app.post("/api/payroll/generate", async (req, res) => {
       
       // Parse employee salary data
       const monthlyBasicSalary = parseFloat(employee.basic_salary); // Full monthly contract salary
+      const otherAllowance = parseFloat(employee.other_allowance || "0");
       const otRateNormal = parseFloat(employee.ot_rate_normal || "0");
       const otRateFriday = parseFloat(employee.ot_rate_friday || "0");
       const otRateHoliday = parseFloat(employee.ot_rate_holiday || "0");
       const foodAllowanceAmount = parseFloat(employee.food_allowance_amount || "0");
+
+      // Calculate Hourly Basic Salary (HBS) for OT rates using employee's working hours
+      const workingHoursPerDay = Number(employee.working_hours ?? 0) > 0 ? Number(employee.working_hours) : 8;
+      const totalMonthlyHours = 26 * workingHoursPerDay; // e.g., 26*8=208 or 26*10=260
+      const hourlyBasicSalary = monthlyBasicSalary / totalMonthlyHours;
+
+      // Calculate Prorated Basic Salary: (Monthly Basic / 26) × Worked Days
+      const proratedBasicSalary = (monthlyBasicSalary / 26) * actualPresentDays;
       
-      // Determine working-hour context for the employee/month
-      const configuredHours = Number(employee.working_hours ?? 0);
-      const hoursPerDay = configuredHours > 0 ? configuredHours : 8;
-      const scheduledHoursForMonth = workingDays * hoursPerDay;
-      const workedHoursForMonth = actualPresentDays * hoursPerDay;
-
-      if (scheduledHoursForMonth === 0) {
-        console.log(`Warning: Skipping ${employee.emp_id} (${employee.name}) - Zero scheduled hours`);
-        errors.push({
-          emp_id: employee.emp_id,
-          name: employee.name,
-          error: "Zero scheduled working hours"
-        });
-        continue;
-      }
-
-      // Calculate Hourly Basic Salary (HBS) for OT and gross salary calculations
-      const hourlyBasicSalary = (monthlyBasicSalary / 26) / hoursPerDay;
-
-      // Calculate Prorated Basic Salary (Payable Basic) using actual worked hours
-      const payableBasicSalary = monthlyBasicSalary * (workedHoursForMonth / scheduledHoursForMonth);
+      // Calculate Prorated Other Allowance: (Other Allowance / 26) × Worked Days
+      const proratedOtherAllowance = otherAllowance > 0 ? (otherAllowance / 26) * actualPresentDays : 0;
       
       // OT hours are already aggregated above (from all attendance records for the month)
       
@@ -532,7 +527,7 @@ app.post("/api/payroll/generate", async (req, res) => {
         // Employee has custom OT rate per hour
         normalOtRate = otRateNormal;
       } else {
-        // Calculate: HBS × Multiplier
+        // Calculate: HBS × Multiplier (HBS from full salary / 208)
         normalOtRate = hourlyBasicSalary * NORMAL_OT_MULTIPLIER;
       }
       
@@ -549,50 +544,62 @@ app.post("/api/payroll/generate", async (req, res) => {
       }
       
       // Calculate OT Pay: Hours × Rate
-      const normalOtPay = otHoursNormal * normalOtRate;
-      const fridayOtPay = otHoursFriday * fridayOtRate;
-      const holidayOtPay = otHoursHoliday * holidayOtRate;
-      const totalOtPay = normalOtPay + fridayOtPay + holidayOtPay;
+      let normalOtPay = otHoursNormal * normalOtRate;
+      let fridayOtPay = otHoursFriday * fridayOtRate;
+      let holidayOtPay = otHoursHoliday * holidayOtRate;
       
-      // Calculate food allowance based on employee settings
-      let foodAllowance = 0;
-      
-      if (employee.food_allowance_type !== "none") {
-        // Check if employee has approved leave in this month
-        const empLeaves = leaves.filter(l => 
-          l.emp_id === employee.emp_id && 
-          l.status === "Approved" &&
-          l.start_date.toString().startsWith(month.split('-').reverse().join('-'))
-        );
-        
-        if (empLeaves.length === 0) {
-          // No approved leave, apply food allowance
-          if (employee.food_allowance_type === "fixed") {
-            foodAllowance = foodAllowanceAmount;
-          } else if (employee.food_allowance_type === "per_day") {
-            // Use actualPresentDays (round_off if available)
-            foodAllowance = actualPresentDays * foodAllowanceAmount;
-          }
-        } else {
-          console.log(`No food allowance for ${employee.emp_id} - approved leave exists`);
-        }
+      // Special rule: Rehab indirect employees get 70% of OT pay
+      const isRehabIndirect = employee.department?.toLowerCase() === 'rehab' && 
+                              employee.category?.toLowerCase() === 'indirect';
+      if (isRehabIndirect) {
+        normalOtPay *= 0.70;
+        fridayOtPay *= 0.70;
+        holidayOtPay *= 0.70;
+        console.log(`  Applied 70% OT reduction for Rehab indirect employee`);
       }
       
-      // Calculate Gross Salary: Payable Basic + Total OT Pay + Food Allowance
-      const grossSalary = ((payableBasicSalary/26)*actualPresentDays) + totalOtPay + foodAllowance;
+      const totalOtPay = normalOtPay + fridayOtPay + holidayOtPay;
+      
+      // Calculate food allowance: Positive logic - default to 0, only pay if conditions met
+      let foodAllowance = 0;
+      
+      // Robust accommodation check: strip, lowercase, fuzzy match for "own"
+      const accommodationRaw = String(employee.accommodation || '').trim().toLowerCase();
+      const hasOwnAccommodation = accommodationRaw.includes('own');
+      
+      // Check category
+      const isIndirect = employee.category?.toLowerCase() === 'indirect';
+      
+      // Only pay if BOTH Indirect category AND Own accommodation
+      if (isIndirect && hasOwnAccommodation && foodAllowanceAmount > 0) {
+        // Prorate food allowance: (Food Allowance / 26) × Worked Days
+        foodAllowance = (foodAllowanceAmount / 26) * actualPresentDays;
+        console.log(`  Food Allowance: ${foodAllowance.toFixed(3)} KWD (Indirect + Own: "${employee.accommodation}")`);
+      } else {
+        const reason = !isIndirect ? 'Direct category' : !hasOwnAccommodation ? `Accommodation: "${employee.accommodation}"` : 'No allowance amount';
+        console.log(`  Food Allowance: 0 KWD (${reason})`);
+      }
+      
+      // Calculate Gross Salary: Prorated Basic + Prorated Other + Prorated Food + Total OT
+      const grossSalary = proratedBasicSalary + proratedOtherAllowance + foodAllowance + totalOtPay;
       
       // Deductions (can be extended in the future)
       const deductions = 0;
       
       // Calculate Net Salary: Gross Salary - Deductions
-      const netSalary = grossSalary - deductions;
+      const netSalaryRaw = grossSalary - deductions;
+      
+      // Apply rounding: if decimal >= 0.5 round up, else round down
+      const netSalary = Math.round(netSalaryRaw);
       
       // Detailed logging
       console.log(`\n${employee.emp_id} (${employee.name}):`);
       console.log(`  Month: ${month} | Attendance Records: ${empAttendances.length}`);
-      console.log(`  Contract Basic Salary: ${monthlyBasicSalary.toFixed(3)} KWD`);
-      console.log(`  Payable Basic Salary (Prorated): ${payableBasicSalary.toFixed(3)} KWD`);
-      console.log(`  Hourly Basic Salary (HBS): ${hourlyBasicSalary.toFixed(3)} KWD/hour (based on ${scheduledHoursForMonth} scheduled hours)`);
+      console.log(`  Master Basic Salary: ${monthlyBasicSalary.toFixed(3)} KWD`);
+      console.log(`  Working Hours: ${workingHoursPerDay}h/day | Total Monthly Hours: ${totalMonthlyHours}`);
+      console.log(`  Prorated Basic Salary: ${proratedBasicSalary.toFixed(3)} KWD (${monthlyBasicSalary.toFixed(3)} / 26 × ${actualPresentDays})`);
+      console.log(`  Prorated Other Allowance: ${proratedOtherAllowance.toFixed(3)} KWD`);
+      console.log(`  Hourly Basic Salary (HBS): ${hourlyBasicSalary.toFixed(3)} KWD/hour (${monthlyBasicSalary.toFixed(3)} / ${totalMonthlyHours})`);
       console.log(`  Aggregated Attendance - Working: ${workingDays}, Present: ${presentDays}, Round Off: ${roundedOffDays}, Using: ${actualPresentDays}, Absent: ${absentDays} days`);
       console.log(`  Aggregated OT Hours - Normal: ${otHoursNormal.toFixed(2)}h, Friday: ${otHoursFriday.toFixed(2)}h, Holiday: ${otHoursHoliday.toFixed(2)}h`);
       console.log(`  OT Rates - Normal: ${normalOtRate.toFixed(3)}, Friday: ${fridayOtRate.toFixed(3)}, Holiday: ${holidayOtRate.toFixed(3)} KWD/hour`);
@@ -606,7 +613,7 @@ app.post("/api/payroll/generate", async (req, res) => {
       payrolls.push({
         emp_id: employee.emp_id,
         month,
-        basic_salary: payableBasicSalary.toFixed(2),
+        basic_salary: proratedBasicSalary.toFixed(2),
         ot_amount: totalOtPay.toFixed(2),
         food_allowance: foodAllowance.toFixed(2),
         days_worked: actualPresentDays,
@@ -778,47 +785,102 @@ app.post("/api/payroll/generate", async (req, res) => {
         const friday_ot = Number(a?.ot_hours_friday ?? 0);
         const holiday_ot = Number(a?.ot_hours_holiday ?? 0);
 
-        // Base and rates from employee record
-        const basic_salary = Number(e.basic_salary ?? 0);
-        const rate_normal = Number(e.ot_rate_normal ?? 0);
-        const rate_friday = Number(e.ot_rate_friday ?? 0);
-        const rate_holiday = Number(e.ot_rate_holiday ?? 0);
+        // Base salary from employee record
+        const master_basic_salary = Number(e.basic_salary ?? 0);
+        const workingHoursPerDay = Number(e.working_hours ?? 0) > 0 ? Number(e.working_hours) : 8;
+        const totalMonthlyHours = 26 * workingHoursPerDay; // e.g., 26*8=208 or 26*10=260
+        const hourlyBasicSalary = master_basic_salary / totalMonthlyHours;
+        
+        // Calculate prorated basic salary: (Basic / 26) × Worked Days
+        const prorated_basic = (master_basic_salary / 26) * worked_days;
+        
+        // Calculate prorated other allowance: (Other / 26) × Worked Days
+        const other_allowance = Number(e.other_allowance ?? 0);
+        const prorated_other = other_allowance > 0 ? (other_allowance / 26) * worked_days : 0;
+        
+        // Calculate OT rates based on hourly basic salary (from full monthly salary)
+        const customRateNormal = Number(e.ot_rate_normal ?? 0);
+        const customRateFriday = Number(e.ot_rate_friday ?? 0);
+        const customRateHoliday = Number(e.ot_rate_holiday ?? 0);
+        
+        const rate_normal = customRateNormal > 0 ? customRateNormal : hourlyBasicSalary * 1.25;
+        const rate_friday = customRateFriday > 0 ? customRateFriday : hourlyBasicSalary * 1.50;
+        const rate_holiday = customRateHoliday > 0 ? customRateHoliday : hourlyBasicSalary * 2.00;
 
-        // Compute amounts from attendance if payroll row absent
-        const ot_amount_calc = normal_ot * rate_normal + friday_ot * rate_friday + holiday_ot * rate_holiday;
+        // Compute OT amounts
+        let ot_normal_amount = normal_ot * rate_normal;
+        let ot_friday_amount = friday_ot * rate_friday;
+        let ot_holiday_amount = holiday_ot * rate_holiday;
+        
+        // Special rule: Rehab indirect employees get 70% of OT pay
+        const isRehabIndirect = e.department?.toLowerCase() === 'rehab' && 
+                                e.category?.toLowerCase() === 'indirect';
+        if (isRehabIndirect) {
+          ot_normal_amount *= 0.70;
+          ot_friday_amount *= 0.70;
+          ot_holiday_amount *= 0.70;
+        }
+        
+        const ot_amount_calc = ot_normal_amount + ot_friday_amount + ot_holiday_amount;
 
-        // Food allowance based on policy
+        // Food allowance: Positive logic - default to 0, only pay if conditions met
         let food_allow_calc = 0;
-        if (e.food_allowance_type === "per_day") {
-          food_allow_calc = Number(e.food_allowance_amount ?? 0) * worked_days;
-        } else if (e.food_allowance_type === "fixed") {
-          food_allow_calc = Number(e.food_allowance_amount ?? 0);
+        
+        // Robust accommodation check: strip, lowercase, fuzzy match for "own"
+        const accommodationRaw = String(e.accommodation || '').trim().toLowerCase();
+        const hasOwnAccommodation = accommodationRaw.includes('own');
+        
+        // Check category
+        const isIndirect = e.category?.toLowerCase() === 'indirect';
+        
+        // Only pay if BOTH Indirect category AND Own accommodation
+        if (isIndirect && hasOwnAccommodation) {
+          const food_amount = Number(e.food_allowance_amount ?? 0);
+          if (food_amount > 0) {
+            food_allow_calc = (food_amount / 26) * worked_days;
+          }
         }
 
         // Prefer persisted payroll amounts if available, otherwise use calculated
         const food_allow = p ? Number(p.food_allowance ?? 0) : food_allow_calc;
         const ot_amount = p ? Number(p.ot_amount ?? 0) : ot_amount_calc;
         const deductions = p ? Number(p.deductions ?? 0) : 0;
-        const gross_salary = p ? Number(p.gross_salary ?? 0) : (basic_salary + ot_amount + food_allow);
-        const net_salary = p ? Number(p.net_salary ?? 0) : (gross_salary - deductions);
+        const gross_salary = p ? Number(p.gross_salary ?? 0) : (prorated_basic + prorated_other + food_allow + ot_amount);
+        const net_salary_raw = p ? Number(p.net_salary ?? 0) : (gross_salary - deductions);
+        
+        // Apply rounding: if decimal >= 0.5 round up, else round down
+        const net_salary = Math.round(net_salary_raw);
+        
+        // Calculate allowances earned: prorated other allowance + prorated food allowance
+        const allowances_earned = prorated_other + food_allow;
+        
+        // Dues earned: will be calculated later, for now use persisted value or default to 0
+        const dues_earned = p ? Number(p.dues_earned ?? 0) : 0;
 
         return {
           emp_id: e.emp_id,
           name: e.name,
           designation: e.designation,
           department: e.department,
-          salary: basic_salary,
+          salary: master_basic_salary,
           worked_days,
           working_days,
           normal_ot,
           friday_ot,
           holiday_ot,
           food_allow,
+          allowances_earned,
+          dues_earned,
           deductions,
           gross_salary,
           total_earnings: net_salary,
+          comments: a?.comments ?? "",
           month,
         };
+      }).filter((row) => {
+        // Exclude employees with 0 worked days unless they have comments
+        const hasComments = row.comments && row.comments.trim().length > 0;
+        return row.worked_days > 0 || hasComments;
       });
 
       res.json(rows);

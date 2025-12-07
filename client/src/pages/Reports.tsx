@@ -26,8 +26,10 @@ export default function Reports() {
     "normal_ot",
     "friday_ot",
     "holiday_ot",
+    "allowances_earned",
+    "dues_earned",
     "total_earnings",
-    "comments", // Added to default selected columns
+    "comments",
   ]);
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,7 +66,7 @@ export default function Reports() {
             const date = new Date(parseInt(yyyy), parseInt(mm) - 1, 1);
             const label = `${monthNames[date.getMonth()]} ${yyyy}`;
             existingMonths.push({
-              value: `${yyyy}-${mm.padStart(2, '0')}`,
+              value: `${mm.padStart(2, '0')}-${yyyy}`,
               label,
               date
             });
@@ -77,7 +79,7 @@ export default function Reports() {
           const date = new Date(currentYear, month - 1, 1);
           const mm = String(month).padStart(2, "0");
           const yyyy = currentYear;
-          const value = `${yyyy}-${mm}`;
+          const value = `${mm}-${yyyy}`;
           const label = `${monthNames[month - 1]} ${currentYear}`;
 
           existingMonths.push({ value, label, date });
@@ -87,7 +89,7 @@ export default function Reports() {
           const date = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
           const mm = String(date.getMonth() + 1).padStart(2, "0");
           const yyyy = date.getFullYear();
-          const value = `${yyyy}-${mm}`;
+          const value = `${mm}-${yyyy}`;
           const label = `${monthNames[date.getMonth()]} ${yyyy}`;
           existingMonths.push({ value, label, date });
         }
@@ -101,7 +103,7 @@ export default function Reports() {
         const cleanMonths = uniqueMonths.map(({ value, label }) => ({ value, label }));
         setMonths(cleanMonths);
 
-        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const currentMonth = `${String(now.getMonth() + 1).padStart(2, "0")}-${now.getFullYear()}`;
         setSelectedMonth(currentMonth);
 
       } catch (error) {
@@ -121,12 +123,12 @@ export default function Reports() {
 
       for (let month = 1; month <= 12; month++) {
         const mm = String(month).padStart(2, "0");
-        const value = `${currentYear}-${mm}`;
+        const value = `${mm}-${currentYear}`;
         const label = `${monthNames[month - 1]} ${currentYear}`;
         allMonths.push({ value, label });
       }
       setMonths(allMonths);
-      setSelectedMonth(`${currentYear}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+      setSelectedMonth(`${String(now.getMonth() + 1).padStart(2, "0")}-${currentYear}`);
     }
 
     generateMonths();
@@ -172,10 +174,12 @@ export default function Reports() {
     { id: "friday_ot", label: "Friday OT Hours" },
     { id: "holiday_ot", label: "Holiday OT Hours" },
     { id: "food_allow", label: "Food Allowance" },
+    { id: "allowances_earned", label: "Allowances Earned" },
+    { id: "dues_earned", label: "Dues Earned" },
     { id: "deductions", label: "Deductions" },
     { id: "gross_salary", label: "Gross Salary" },
     { id: "total_earnings", label: "Net Salary" },
-    { id: "comments", label: "Comments" }, // Include comments column
+    { id: "comments", label: "Comments" },
   ];
 
   const toggleColumn = (columnId: string) => {
@@ -203,9 +207,12 @@ export default function Reports() {
 
         if (
           typeof value === "number" &&
-          ["salary", "food_allow", "deductions", "gross_salary", "total_earnings"].includes(colId)
+          ["salary", "food_allow", "allowances_earned", "dues_earned", "deductions", "gross_salary"].includes(colId)
         ) {
           value = parseFloat(value.toString()).toFixed(2);
+        } else if (colId === "total_earnings" && typeof value === "number") {
+          // Net salary is already rounded to integer on backend
+          value = Math.round(value);
         }
 
         filteredRow[label] = value ?? "";

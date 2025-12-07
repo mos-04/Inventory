@@ -12,6 +12,7 @@ import type { Employee, Attendance, Leave } from "@shared/schema";
  */
 export const KUWAIT_WORKING_DAYS_PER_MONTH = 26;
 export const DEFAULT_WORKING_HOURS_PER_DAY = 8;
+export const HOURS_DIVISOR = 208; // 26 days × 8 hours
 
 /**
  * Standard OT multipliers for Kuwait
@@ -28,18 +29,41 @@ function resolveHoursPerDay(hours?: number | null): number {
 }
 
 /**
- * Calculate Hourly Basic Salary (HBS)
- * Formula: HBS = Basic Salary ÷ (Working Days × Working Hours Per Day)
+ * Calculate Hourly Basic Salary (HBS) for OT rate calculations
+ * Formula: HBS = Basic Salary ÷ (26 × Working Hours Per Day)
+ * Note: Uses full monthly basic salary, not prorated
+ * Working hours can be 8, 10, or other values per employee
  */
 export function calculateHourlyBasicSalary(
   basicSalary: number,
-  workingDays: number,
-  hoursPerDay: number
+  workingHoursPerDay: number
 ): number {
-  const normalizedWorkingDays = Math.max(workingDays, 0) || KUWAIT_WORKING_DAYS_PER_MONTH;
-  const normalizedHoursPerDay = Math.max(hoursPerDay, 0) || DEFAULT_WORKING_HOURS_PER_DAY;
-  const scheduledHours = normalizedWorkingDays * normalizedHoursPerDay;
-  return scheduledHours > 0 ? basicSalary / scheduledHours : 0;
+  const hoursPerDay = workingHoursPerDay > 0 ? workingHoursPerDay : DEFAULT_WORKING_HOURS_PER_DAY;
+  const totalMonthlyHours = KUWAIT_WORKING_DAYS_PER_MONTH * hoursPerDay;
+  return basicSalary / totalMonthlyHours;
+}
+
+/**
+ * Calculate prorated basic salary based on worked days
+ * Formula: Earned Basic = (Monthly Basic / 26) × Worked Days
+ */
+export function calculateProratedBasicSalary(
+  basicSalary: number,
+  workedDays: number
+): number {
+  return (basicSalary / KUWAIT_WORKING_DAYS_PER_MONTH) * workedDays;
+}
+
+/**
+ * Calculate prorated other allowance based on worked days
+ * Formula: Earned Other = (Other Allowance / 26) × Worked Days
+ */
+export function calculateProratedOtherAllowance(
+  otherAllowance: number,
+  workedDays: number
+): number {
+  if (otherAllowance <= 0) return 0;
+  return (otherAllowance / KUWAIT_WORKING_DAYS_PER_MONTH) * workedDays;
 }
 
 /**
@@ -52,6 +76,7 @@ export function calculateDailyRate(monthlySalary: number): number {
 /**
  * Calculate OT rates and amounts for an employee
  * Returns rates (KWD/hour) and pay (KWD) for each OT type
+ * Special rule: Rehab department indirect employees receive 70% of OT pay
  */
 export function calculateOvertimeAmount(
   employee: Employee,
@@ -70,9 +95,8 @@ export function calculateOvertimeAmount(
   };
 } {
   const basicSalary = parseFloat(employee.basic_salary);
-  const workingDays = parseInt(attendance.working_days.toString()) || KUWAIT_WORKING_DAYS_PER_MONTH;
-  const hoursPerDay = resolveHoursPerDay(employee.working_hours);
-  const hourlyBasicSalary = calculateHourlyBasicSalary(basicSalary, workingDays, hoursPerDay);
+  const workingHoursPerDay = resolveHoursPerDay(employee.working_hours);
+  const hourlyBasicSalary = calculateHourlyBasicSalary(basicSalary, workingHoursPerDay);
   
   // Get employee's custom OT rates if available (these are per-hour rates)
   const customOtRateNormal = parseFloat(employee.ot_rate_normal || "0");
@@ -98,9 +122,19 @@ export function calculateOvertimeAmount(
     : hourlyBasicSalary * OT_MULTIPLIERS.holiday;
   
   // Calculate OT Pay: Hours × Rate
-  const normalPay = otHoursNormal * normalOtRate;
-  const fridayPay = otHoursFriday * fridayOtRate;
-  const holidayPay = otHoursHoliday * holidayOtRate;
+  let normalPay = otHoursNormal * normalOtRate;
+  let fridayPay = otHoursFriday * fridayOtRate;
+  let holidayPay = otHoursHoliday * holidayOtRate;
+  
+  // Special rule: Rehab department indirect employees get 70% of OT pay
+  const isRehabIndirect = employee.department?.toLowerCase() === 'rehab' && 
+                          employee.category?.toLowerCase() === 'indirect';
+  
+  if (isRehabIndirect) {
+    normalPay = normalPay * 0.70;
+    fridayPay = fridayPay * 0.70;
+    holidayPay = holidayPay * 0.70;
+  }
   
   return {
     rates: {
@@ -119,37 +153,36 @@ export function calculateOvertimeAmount(
 
 /**
  * Calculate food allowance for an employee
+ * Rules (Positive Logic - Default to 0):
+ * 1. Default food allowance is 0 (SAFE)
+ * 2. Only pay if accommodation contains "own" (case-insensitive, fuzzy match)
+ * 3. Must be Indirect category
+ * 4. Prorated by worked days
  */
 export function calculateFoodAllowance(
   employee: Employee,
-  attendance: Attendance,
-  monthlyLeaves: Leave[]
+  workedDays: number
 ): number {
-  // Check if employee has food allowance
-  if (employee.food_allowance_type === "none") {
-    return 0;
+  // Default to 0 (safe default - only pay if conditions are met)
+  let foodAllowance = 0;
+  
+  // Robust accommodation check: strip whitespace, lowercase, check for "own"
+  const accommodationRaw = String(employee.accommodation || '').trim().toLowerCase();
+  const hasOwnAccommodation = accommodationRaw.includes('own');
+  
+  // Check category (must be Indirect)
+  const isIndirect = employee.category?.toLowerCase() === 'indirect';
+  
+  // Positive logic: Only pay if BOTH conditions are met
+  if (isIndirect && hasOwnAccommodation) {
+    const foodAllowanceAmount = parseFloat(employee.food_allowance_amount || "0");
+    if (foodAllowanceAmount > 0) {
+      // Prorate food allowance: (Food Allowance / 26) × Worked Days
+      foodAllowance = (foodAllowanceAmount / KUWAIT_WORKING_DAYS_PER_MONTH) * workedDays;
+    }
   }
   
-  // Check if employee has approved leave (no food allowance if on leave)
-  const hasApprovedLeave = monthlyLeaves.some(
-    leave => leave.emp_id === employee.emp_id && leave.status === "Approved"
-  );
-  
-  if (hasApprovedLeave) {
-    return 0;
-  }
-  
-  const allowanceAmount = parseFloat(employee.food_allowance_amount || "0");
-  
-  // Calculate based on type
-  if (employee.food_allowance_type === "fixed") {
-    return allowanceAmount;
-  } else if (employee.food_allowance_type === "per_day") {
-    const presentDays = parseInt(attendance.present_days.toString()) || 0;
-    return presentDays * allowanceAmount;
-  }
-  
-  return 0;
+  return foodAllowance;
 }
 
 /**
@@ -199,29 +232,39 @@ export function calculateEmployeePayroll(
   const hoursPerDay = resolveHoursPerDay(employee.working_hours);
   const workedHours = presentDays * hoursPerDay;
   
-  // Get full basic salary (not prorated)
-  const basicSalary = getBasicSalary(employee);
-  const hourlyBasicSalary = calculateHourlyBasicSalary(basicSalary, workingDays, hoursPerDay);
-  const payableBasicSalary = hourlyBasicSalary * workedHours;
+  // Get master basic salary for OT rate calculation
+  const masterBasicSalary = getBasicSalary(employee);
+  const hourlyBasicSalary = calculateHourlyBasicSalary(masterBasicSalary, hoursPerDay);
+  
+  // Calculate prorated basic salary based on worked days
+  const proratedBasicSalary = calculateProratedBasicSalary(masterBasicSalary, presentDays);
+  
+  // Calculate prorated other allowance
+  const otherAllowance = parseFloat(employee.other_allowance || "0");
+  const proratedOtherAllowance = calculateProratedOtherAllowance(otherAllowance, presentDays);
   
   // Calculate OT
   const ot = calculateOvertimeAmount(employee, attendance);
   
-  // Calculate food allowance
-  const foodAllowance = calculateFoodAllowance(employee, attendance, monthlyLeaves);
+  // Calculate prorated food allowance (category-based)
+  const foodAllowance = calculateFoodAllowance(employee, presentDays);
   
-  // Calculate Gross Salary: Payable Basic + Total OT Pay + Food Allowance
-  const grossSalary = payableBasicSalary + ot.pay.total + foodAllowance;
+  // Calculate Gross Salary: Prorated Basic + Prorated Other + Prorated Food + Total OT Pay
+  const grossSalary = proratedBasicSalary + proratedOtherAllowance + foodAllowance + ot.pay.total;
   
   // Deductions (can be extended in future)
   const totalDeductions = 0;
   
   // Calculate Net Salary: Gross Salary - Deductions
-  const netSalary = grossSalary - totalDeductions;
+  const netSalaryRaw = grossSalary - totalDeductions;
+  
+  // Apply rounding: if decimal >= 0.5 round up, else round down
+  const netSalary = Math.round(netSalaryRaw);
   
   return {
-    basicSalary,
-    payableBasicSalary,
+    basicSalary: masterBasicSalary,
+    payableBasicSalary: proratedBasicSalary,
+    otherAllowance: proratedOtherAllowance,
     hourlyBasicSalary,
     otAmount: ot.pay.total,
     foodAllowance,
