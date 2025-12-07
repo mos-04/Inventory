@@ -455,10 +455,10 @@ app.post("/api/payroll/generate", async (req, res) => {
       }
 
       // Calculate Hourly Basic Salary (HBS) for OT and gross salary calculations
-      const hourlyBasicSalary = monthlyBasicSalary / scheduledHoursForMonth;
+      const hourlyBasicSalary = (monthlyBasicSalary / 26) / hoursPerDay;
 
       // Calculate Prorated Basic Salary (Payable Basic) using actual worked hours
-      const payableBasicSalary = hourlyBasicSalary * workedHoursForMonth;
+      const payableBasicSalary = monthlyBasicSalary * (workedHoursForMonth / scheduledHoursForMonth);
       
       // OT hours are already aggregated above (from all attendance records for the month)
       
@@ -467,8 +467,6 @@ app.post("/api/payroll/generate", async (req, res) => {
       const FRIDAY_OT_MULTIPLIER = 1.50;
       const HOLIDAY_OT_MULTIPLIER = 2.00;
       
-      // Calculate OT Rates
-      // If employee has custom rates per hour, use them; otherwise calculate from HBS
       let normalOtRate = 0;
       let fridayOtRate = 0;
       let holidayOtRate = 0;
