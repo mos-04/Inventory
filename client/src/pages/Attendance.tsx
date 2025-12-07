@@ -50,7 +50,7 @@ useEffect(() => {
           const date = new Date(parseInt(yyyy), parseInt(mm) - 1, 1);
           const label = `${monthNames[date.getMonth()]} ${yyyy}`;
           existingMonths.push({ 
-            value: `${yyyy}-${mm.padStart(2, '0')}`, 
+            value: `${mm.padStart(2, '0')}-${yyyy}`, 
             label, 
             date 
           });
