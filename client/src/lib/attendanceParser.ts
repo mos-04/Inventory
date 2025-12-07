@@ -57,6 +57,7 @@ export async function parseAttendanceFile(file: File): Promise<{ fileName: strin
   const photCol = findHeader(["phot", "ph_ot", "ph-ot", "photot"]);
   const commentsCol = findHeader(["comments", "remark", "remarks", "comment"]);
   const totalWorkingDaysCol = findHeader(["totalworkingdaysonsite", "totalworkingdays", "workingdays", "working_days"]);
+  const roundOffCol = findHeader(["roundoff", "round_off", "round-off","Round Off"]);
 
   if (empIdCol === -1 || dayCols.length === 0) {
     throw new Error("Invalid file format: couldn't find Emp id or day columns (1..31).");
@@ -103,12 +104,14 @@ export async function parseAttendanceFile(file: File): Promise<{ fileName: strin
     const comments = commentsCol !== -1 ? String(row[commentsCol] ?? "").trim() : "";
     const totalWorkingDaysRaw = totalWorkingDaysCol !== -1 ? toNum(row[totalWorkingDaysCol]) : undefined;
     const totalWorkingDays = Number.isFinite(totalWorkingDaysRaw) && totalWorkingDaysRaw ? totalWorkingDaysRaw : dailyStatus.length;
+    const roundOffValue = roundOffCol !== -1 ? toNum(row[roundOffCol]) : undefined;
     const unpaid_days = Math.max(totalWorkingDays - worked_days, 0);
 
     parsedRecords.push({
       emp_id,
       worked_days,
       total_working_days: totalWorkingDays,
+      round_off: roundOffValue,
       normal_ot: OT,
       friday_ot: FOT,
       holiday_ot: PHOT,

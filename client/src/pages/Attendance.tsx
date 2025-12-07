@@ -159,6 +159,7 @@ function formatMonthLabel(monthStr: string) {
           working_days,
           present_days,
           absent_days,
+          round_off: r.round_off !== undefined ? to2(r.round_off) : null,
           ot_hours_normal: to2(r.normal_ot),
           ot_hours_friday: to2(r.friday_ot),
           ot_hours_holiday: to2(r.holiday_ot),

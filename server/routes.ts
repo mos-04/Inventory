@@ -401,6 +401,13 @@ app.post("/api/payroll/generate", async (req, res) => {
         sum + (parseInt(att.present_days.toString()) || 0), 0);
       const absentDays = empAttendances.reduce((sum, att) => 
         sum + (parseInt(att.absent_days.toString()) || 0), 0);
+      
+      // Use round_off if available, otherwise fallback to present_days
+      const roundedOffDays = empAttendances.reduce((sum, att) => {
+        const roundOff = att.round_off ? parseFloat(att.round_off.toString()) : 0;
+        return sum + roundOff;
+      }, 0);
+      const actualPresentDays = roundedOffDays > 0 ? roundedOffDays : presentDays;
       const otHoursNormal = empAttendances.reduce((sum, att) => 
         sum + (parseFloat(att.ot_hours_normal || "0")), 0);
       const otHoursFriday = empAttendances.reduce((sum, att) => 
@@ -421,8 +428,8 @@ app.post("/api/payroll/generate", async (req, res) => {
         continue;
       }
       
-      if (presentDays === 0) {
-        console.log(`Warning: Skipping ${employee.emp_id} (${employee.name}) - Zero present days`);
+      if (actualPresentDays === 0) {
+        console.log(`Warning: Skipping ${employee.emp_id} (${employee.name}) - Zero present/rounded days`);
         errors.push({
           emp_id: employee.emp_id,
           name: employee.name,
@@ -442,7 +449,7 @@ app.post("/api/payroll/generate", async (req, res) => {
       const configuredHours = Number(employee.working_hours ?? 0);
       const hoursPerDay = configuredHours > 0 ? configuredHours : 8;
       const scheduledHoursForMonth = workingDays * hoursPerDay;
-      const workedHoursForMonth = presentDays * hoursPerDay;
+      const workedHoursForMonth = actualPresentDays * hoursPerDay;
 
       if (scheduledHoursForMonth === 0) {
         console.log(`Warning: Skipping ${employee.emp_id} (${employee.name}) - Zero scheduled hours`);
@@ -513,8 +520,8 @@ app.post("/api/payroll/generate", async (req, res) => {
           if (employee.food_allowance_type === "fixed") {
             foodAllowance = foodAllowanceAmount;
           } else if (employee.food_allowance_type === "per_day") {
-            // Use aggregated present days
-            foodAllowance = presentDays * foodAllowanceAmount;
+            // Use actualPresentDays (round_off if available)
+            foodAllowance = actualPresentDays * foodAllowanceAmount;
           }
         } else {
           console.log(`No food allowance for ${employee.emp_id} - approved leave exists`);
@@ -522,7 +529,7 @@ app.post("/api/payroll/generate", async (req, res) => {
       }
       
       // Calculate Gross Salary: Payable Basic + Total OT Pay + Food Allowance
-      const grossSalary = ((payableBasicSalary/26)*presentDays) + totalOtPay + foodAllowance;
+      const grossSalary = ((payableBasicSalary/26)*actualPresentDays) + totalOtPay + foodAllowance;
       
       // Deductions (can be extended in the future)
       const deductions = 0;
@@ -536,7 +543,7 @@ app.post("/api/payroll/generate", async (req, res) => {
       console.log(`  Contract Basic Salary: ${monthlyBasicSalary.toFixed(3)} KWD`);
       console.log(`  Payable Basic Salary (Prorated): ${payableBasicSalary.toFixed(3)} KWD`);
       console.log(`  Hourly Basic Salary (HBS): ${hourlyBasicSalary.toFixed(3)} KWD/hour (based on ${scheduledHoursForMonth} scheduled hours)`);
-      console.log(`  Aggregated Attendance - Working: ${workingDays}, Present: ${presentDays}, Absent: ${absentDays} days`);
+      console.log(`  Aggregated Attendance - Working: ${workingDays}, Present: ${presentDays}, Round Off: ${roundedOffDays}, Using: ${actualPresentDays}, Absent: ${absentDays} days`);
       console.log(`  Aggregated OT Hours - Normal: ${otHoursNormal.toFixed(2)}h, Friday: ${otHoursFriday.toFixed(2)}h, Holiday: ${otHoursHoliday.toFixed(2)}h`);
       console.log(`  OT Rates - Normal: ${normalOtRate.toFixed(3)}, Friday: ${fridayOtRate.toFixed(3)}, Holiday: ${holidayOtRate.toFixed(3)} KWD/hour`);
       console.log(`  OT Pay - Normal: ${normalOtPay.toFixed(3)}, Friday: ${fridayOtPay.toFixed(3)}, Holiday: ${holidayOtPay.toFixed(3)} KWD`);
@@ -552,7 +559,7 @@ app.post("/api/payroll/generate", async (req, res) => {
         basic_salary: payableBasicSalary.toFixed(2),
         ot_amount: totalOtPay.toFixed(2),
         food_allowance: foodAllowance.toFixed(2),
-        days_worked: presentDays,
+        days_worked: actualPresentDays,
         gross_salary: grossSalary.toFixed(2),
         deductions: deductions.toFixed(2),
         net_salary: netSalary.toFixed(2),

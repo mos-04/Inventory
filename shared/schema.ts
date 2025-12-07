@@ -50,6 +50,7 @@ export const attendance = pgTable("attendance", {
   working_days: integer("working_days").notNull(),
   present_days: integer("present_days").notNull(),
   absent_days: integer("absent_days").notNull(),
+  round_off: decimal("round_off", { precision: 10, scale: 2 }),
   ot_hours_normal: decimal("ot_hours_normal", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_hours_friday: decimal("ot_hours_friday", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_hours_holiday: decimal("ot_hours_holiday", { precision: 10, scale: 2 }).notNull().default("0"),
