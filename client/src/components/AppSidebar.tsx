@@ -18,7 +18,6 @@ import {
   FileText,
   Calendar,
   Wallet,
-  Settings,
   LogOut,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
@@ -96,21 +95,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>System</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/settings" data-testid="link-settings">
-                    <Settings className="h-4 w-4" />
-                    <span>Settings</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        
       </SidebarContent>
       <SidebarFooter className="p-4 border-t">
         <SidebarMenu>
