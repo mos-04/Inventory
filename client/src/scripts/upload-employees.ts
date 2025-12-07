@@ -29,7 +29,11 @@ async function main() {
 
   // 2. map CSV columns → backend payload
   const employees = records.map((r, index) => ({
-    emp_id: String(r["Employee No."] || r["Employee No"] || index + 1),
+emp_id: String(
+  r['Employee \r\nNo.'] ??   // handles the broken header with newline
+  r['Employee No.'] ??       // normal header variant
+  r['Employee No']           // fallback
+),
     name: r["Employee Name"],
     civil_id: r["Civil id #"] || null,
     designation: r["Designation"],
