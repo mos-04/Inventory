@@ -219,6 +219,51 @@ export default function Reports() {
       });
       return filteredRow;
     });
+// ✅ add total row for all numeric columns
+const totalRow: Record<string, any> = {};
+const firstSelectedLabel = columnMap[selectedColumns[0]] || selectedColumns[0];
+totalRow[firstSelectedLabel] = "TOTAL";
+
+// which columns should be summed numerically
+const numericCols = [
+  "salary",
+  "worked_days",
+  "working_days",
+  "normal_ot",
+  "friday_ot",
+  "holiday_ot",
+  "food_allow",
+  "allowances_earned",
+  "dues_earned",
+  "deductions",
+  "gross_salary",
+  "total_earnings",
+];
+
+// for each selected column, if numeric → sum, else leave blank
+selectedColumns.forEach((colId) => {
+  const label = columnMap[colId] || colId;
+  if (numericCols.includes(colId)) {
+    const total = rows.reduce(
+      (sum, row) => sum + (Number(row[colId]) || 0),
+      0
+    );
+    // format similar to your per-row logic
+    if (["salary", "food_allow", "allowances_earned", "dues_earned", "deductions", "gross_salary"].includes(colId)) {
+      totalRow[label] = total.toFixed(2);
+    } else if (colId === "total_earnings") {
+      totalRow[label] = Math.round(total);
+    } else {
+      totalRow[label] = total;
+    }
+  } else if (label !== firstSelectedLabel) {
+    totalRow[label] = "";
+  }
+});
+
+excelData.push(totalRow);
+
+
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
     const workbook = XLSX.utils.book_new();
