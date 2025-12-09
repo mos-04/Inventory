@@ -6,6 +6,7 @@ export interface AttendanceRecord {
   normal_ot: number;
   friday_ot: number;
   holiday_ot: number;
+  dues_earned?: number;
   unpaid_days: number;
   isValid: boolean;
   error?: string;

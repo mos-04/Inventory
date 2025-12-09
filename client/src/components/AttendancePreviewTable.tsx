@@ -62,6 +62,7 @@ export function AttendancePreviewTable({ records, onChange }: AttendancePreviewT
               <TableHead className="font-semibold text-right">Normal OT</TableHead>
               <TableHead className="font-semibold text-right">Friday OT</TableHead>
               <TableHead className="font-semibold text-right">Holiday OT</TableHead>
+              <TableHead className="font-semibold text-right">Dues Earned</TableHead>
               <TableHead className="font-semibold text-right">Unpaid Days</TableHead>
               <TableHead className="font-semibold">Status</TableHead>
               <TableHead className="font-semibold">Comments</TableHead>
@@ -134,6 +135,16 @@ export function AttendancePreviewTable({ records, onChange }: AttendancePreviewT
                     className="w-16 text-right bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
                     value={record.holiday_ot}
                     onChange={(e) => onChange(index, { holiday_ot: Number(e.target.value || 0) })}
+                  />
+                </TableCell>
+                <TableCell className="text-right font-mono text-sm">
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="w-20 text-right bg-transparent outline-none border-b border-muted-foreground/30 focus:border-primary"
+                    value={record.dues_earned ?? 0}
+                    onChange={(e) => onChange(index, { dues_earned: Number(e.target.value || 0) })}
+                    placeholder="0"
                   />
                 </TableCell>
                 <TableCell className="text-right font-mono text-sm">

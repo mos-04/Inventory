@@ -163,6 +163,7 @@ function formatMonthLabel(monthStr: string) {
           ot_hours_normal: to2(r.normal_ot),
           ot_hours_friday: to2(r.friday_ot),
           ot_hours_holiday: to2(r.holiday_ot),
+          dues_earned: r.dues_earned !== undefined ? to2(r.dues_earned) : "0.00",
           comments: r.comments ?? "",
         };
       });

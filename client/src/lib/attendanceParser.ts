@@ -58,6 +58,7 @@ export async function parseAttendanceFile(file: File): Promise<{ fileName: strin
   const commentsCol = findHeader(["comments", "remark", "remarks", "comment"]);
   const totalWorkingDaysCol = findHeader(["totalworkingdaysonsite", "totalworkingdays", "workingdays", "working_days"]);
   const roundOffCol = findHeader(["roundoff", "round_off", "round-off","Round Off"]);
+  const duesEarnedCol = findHeader(["duesearned", "dues_earned", "dues-earned", "dues"]);
 
   if (empIdCol === -1 || dayCols.length === 0) {
     throw new Error("Invalid file format: couldn't find Emp id or day columns (1..31).");
@@ -101,6 +102,7 @@ export async function parseAttendanceFile(file: File): Promise<{ fileName: strin
     const OT = otCol !== -1 ? toNum(row[otCol]) : 0;
     const FOT = fotCol !== -1 ? toNum(row[fotCol]) : 0;
     const PHOT = photCol !== -1 ? toNum(row[photCol]) : 0;
+    const duesEarned = duesEarnedCol !== -1 ? toNum(row[duesEarnedCol]) : 0;
     const comments = commentsCol !== -1 ? String(row[commentsCol] ?? "").trim() : "";
     const totalWorkingDaysRaw = totalWorkingDaysCol !== -1 ? toNum(row[totalWorkingDaysCol]) : undefined;
     const totalWorkingDays = Number.isFinite(totalWorkingDaysRaw) && totalWorkingDaysRaw ? totalWorkingDaysRaw : dailyStatus.length;
@@ -115,6 +117,7 @@ export async function parseAttendanceFile(file: File): Promise<{ fileName: strin
       normal_ot: OT,
       friday_ot: FOT,
       holiday_ot: PHOT,
+      dues_earned: duesEarned,
       unpaid_days,
       comments,
       isValid: true,

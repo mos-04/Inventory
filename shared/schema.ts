@@ -18,27 +18,26 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
 export const employees = pgTable("employees", {
-  // REMOVED: id: serial("id").primaryKey(),  ← This causes the error!
-  emp_id: varchar("emp_id", { length: 50 }).primaryKey(),  // ← emp_id IS your PK
+  emp_id: varchar("emp_id", { length: 50 }).primaryKey(),
   name: text("name").notNull(),
-  civil_id: text("civil_id"),  // Add this if it exists in your table
   designation: text("designation").notNull(),
-  department: text("department").notNull(),
-  category: text("category").notNull().default("Direct"),  // Add if exists
-  doj: date("doj").notNull(),
-  internal_department_doj: date("internal_department_doj"), // Add if exists
-  five_year_calc_date: date("five_year_calc_date"),       // Add if exists
+  civil_id: text("civil_id"),
   basic_salary: decimal("basic_salary", { precision: 10, scale: 2 }).notNull(),
-  other_allowance: decimal("other_allowance", { precision: 10, scale: 2 }).notNull().default("0"), // Add if exists
+  food_allowance_amount: decimal("food_allowance_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+  other_allowance: decimal("other_allowance", { precision: 10, scale: 2 }).notNull().default("0"),
+  department: text("department").notNull(),
+  doj: date("doj").notNull(),
+  internal_department_doj: date("internal_department_doj"),
+  five_year_calc_date: date("five_year_calc_date"),
+  indemnity_rate: decimal("indemnity_rate", { precision: 10, scale: 2 }).notNull().default("0"),
+  working_hours: integer("working_hours").notNull().default(8),
+  category: text("category").notNull().default("Direct"),
   ot_rate_normal: decimal("ot_rate_normal", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_rate_friday: decimal("ot_rate_friday", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_rate_holiday: decimal("ot_rate_holiday", { precision: 10, scale: 2 }).notNull().default("0"),
   food_allowance_type: text("food_allowance_type").notNull().default("none"),
-  food_allowance_amount: decimal("food_allowance_amount", { precision: 10, scale: 2 }).notNull().default("0"),
-  accommodation: text("accommodation").notNull().default("Own"), // Own, Company, Camp, Souq Sabha
-  working_hours: integer("working_hours").notNull().default(8),  // Fixed type
-  indemnity_rate: decimal("indemnity_rate", { precision: 10, scale: 2 }).notNull().default("0"), // Add if exists
   status: text("status").notNull().default("active"),
+  accommodation: text("accommodation").notNull().default("Own"), // Own, Company, Camp, Souq Sabha
 });
 
 export const insertEmployeeSchema = createInsertSchema(employees); // No omit needed now
@@ -51,12 +50,13 @@ export const attendance = pgTable("attendance", {
   working_days: integer("working_days").notNull(),
   present_days: integer("present_days").notNull(),
   absent_days: integer("absent_days").notNull(),
-  round_off: decimal("round_off", { precision: 10, scale: 2 }),
   ot_hours_normal: decimal("ot_hours_normal", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_hours_friday: decimal("ot_hours_friday", { precision: 10, scale: 2 }).notNull().default("0"),
   ot_hours_holiday: decimal("ot_hours_holiday", { precision: 10, scale: 2 }).notNull().default("0"),
-  comments: text("comments"),
   uploaded_at: timestamp("uploaded_at").notNull().defaultNow(),
+  round_off: decimal("round_off", { precision: 10, scale: 2 }),
+  comments: text("comments"),
+  dues_earned: decimal("dues_earned", { precision: 10, scale: 2 }).notNull().default("0"),
 });
 
 export const insertAttendanceSchema = createInsertSchema(attendance).omit({ id: true, uploaded_at: true });
@@ -70,12 +70,12 @@ export const payroll = pgTable("payroll", {
   basic_salary: decimal("basic_salary", { precision: 10, scale: 2 }).notNull(),
   ot_amount: decimal("ot_amount", { precision: 10, scale: 2 }).notNull().default("0"),
   food_allowance: decimal("food_allowance", { precision: 10, scale: 2 }).notNull().default("0"),
-  days_worked: integer("days_worked").notNull().default(0),
   gross_salary: decimal("gross_salary", { precision: 10, scale: 2 }).notNull(),
   deductions: decimal("deductions", { precision: 10, scale: 2 }).notNull().default("0"),
   net_salary: decimal("net_salary", { precision: 10, scale: 2 }).notNull(),
-  dues_earned: decimal("dues_earned", { precision: 10, scale: 2 }).notNull().default("0"),
   generated_at: timestamp("generated_at").notNull().defaultNow(),
+  days_worked: integer("days_worked").notNull().default(0),
+  dues_earned: decimal("dues_earned", { precision: 10, scale: 2 }).notNull().default("0"),
 });
 
 export const insertPayrollSchema = createInsertSchema(payroll).omit({ id: true, generated_at: true });

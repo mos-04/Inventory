@@ -470,6 +470,10 @@ app.post("/api/payroll/generate", async (req, res) => {
       const otHoursHoliday = empAttendances.reduce((sum, att) => 
         sum + (parseFloat(att.ot_hours_holiday || "0")), 0);
       
+      // Aggregate dues_earned from attendance (manual input, not prorated)
+      const duesEarned = empAttendances.reduce((sum, att) => 
+        sum + (parseFloat(att.dues_earned || "0")), 0);
+      
       console.log(`${employee.emp_id}: Aggregated ${empAttendances.length} attendance record(s) for ${month}`);
       
       // Validation: Skip employees with zero working days or zero present days
@@ -586,8 +590,9 @@ app.post("/api/payroll/generate", async (req, res) => {
       // Deductions (can be extended in the future)
       const deductions = 0;
       
-      // Calculate Net Salary: Gross Salary - Deductions
-      const netSalaryRaw = grossSalary - deductions;
+      // Calculate Net Salary: Gross Salary + Dues Earned - Deductions
+      // Formula: Net = (Basic + Food + Allowances + OT) + Dues - Deductions
+      const netSalaryRaw = grossSalary + duesEarned - deductions;
       
       // Apply rounding: if decimal >= 0.5 round up, else round down
       const netSalary = Math.round(netSalaryRaw);
@@ -606,9 +611,10 @@ app.post("/api/payroll/generate", async (req, res) => {
       console.log(`  OT Pay - Normal: ${normalOtPay.toFixed(3)}, Friday: ${fridayOtPay.toFixed(3)}, Holiday: ${holidayOtPay.toFixed(3)} KWD`);
       console.log(`  Total OT Pay: ${totalOtPay.toFixed(3)} KWD`);
       console.log(`  Food Allowance: ${foodAllowance.toFixed(3)} KWD`);
+      console.log(`  Dues Earned: ${duesEarned.toFixed(3)} KWD (manual input)`);
       console.log(`  Gross Salary: ${grossSalary.toFixed(3)} KWD`);
       console.log(`  Deductions: ${deductions.toFixed(3)} KWD`);
-      console.log(`  Net Salary: ${netSalary.toFixed(3)} KWD`);
+      console.log(`  Net Salary: ${netSalary.toFixed(3)} KWD (including dues earned)`);
       
       payrolls.push({
         emp_id: employee.emp_id,
@@ -619,6 +625,7 @@ app.post("/api/payroll/generate", async (req, res) => {
         days_worked: actualPresentDays,
         gross_salary: grossSalary.toFixed(2),
         deductions: deductions.toFixed(2),
+        dues_earned: duesEarned.toFixed(2),
         net_salary: netSalary.toFixed(2),
       });
     }
@@ -841,21 +848,24 @@ app.post("/api/payroll/generate", async (req, res) => {
           }
         }
 
+        // Dues earned from attendance (manual input, fixed amount)
+        const dues_earned_calc = Number(a?.dues_earned ?? 0);
+        
         // Prefer persisted payroll amounts if available, otherwise use calculated
         const food_allow = p ? Number(p.food_allowance ?? 0) : food_allow_calc;
         const ot_amount = p ? Number(p.ot_amount ?? 0) : ot_amount_calc;
+        const dues_earned = p ? Number(p.dues_earned ?? 0) : dues_earned_calc;
         const deductions = p ? Number(p.deductions ?? 0) : 0;
         const gross_salary = p ? Number(p.gross_salary ?? 0) : (prorated_basic + prorated_other + food_allow + ot_amount);
-        const net_salary_raw = p ? Number(p.net_salary ?? 0) : (gross_salary - deductions);
+        
+        // Net Salary: Gross + Dues Earned - Deductions
+        const net_salary_raw = p ? Number(p.net_salary ?? 0) : (gross_salary + dues_earned - deductions);
         
         // Apply rounding: if decimal >= 0.5 round up, else round down
         const net_salary = Math.round(net_salary_raw);
         
         // Allowances earned: Only the prorated other allowance (food is separate column)
         const allowances_earned = prorated_other;
-        
-        // Dues earned: will be calculated later, for now use persisted value or default to 0
-        const dues_earned = p ? Number(p.dues_earned ?? 0) : 0;
 
         return {
           emp_id: e.emp_id,
