@@ -81,7 +81,21 @@ export default function PayrollTable({ data, onSave, onApprove }: PayrollTablePr
   };
 
   const formatCurrency = (value: number) => currencyFormatter.format(value || 0);
+const handleSave = () => {
+  if (!onSave) return;
 
+  const normalized = payrollData.map((row) => ({
+    ...row,
+    basic_salary: toNumber(row.basic_salary),
+    ot_amount: toNumber(row.ot_amount),
+    food_allowance: toNumber(row.food_allowance),
+    gross_salary: toNumber(row.gross_salary),
+    deductions: toNumber(row.deductions),
+    net_salary: toNumber(row.net_salary),
+  }));
+
+  onSave(normalized);
+};
   const handleApprove = () => {
     onApprove?.(payrollData);
   };
@@ -210,12 +224,22 @@ export default function PayrollTable({ data, onSave, onApprove }: PayrollTablePr
         </Table>
       </div>
 
-      <div className="flex justify-end gap-2 pt-4 border-t">
-        <Button onClick={handleApprove} data-testid="button-approve-payroll">
-          <Download className="h-4 w-4 mr-2" />
-          Download File
-        </Button>
-      </div>
+   <div className="flex justify-end gap-2 pt-4 border-t">
+  {onSave && (
+    <Button
+      variant="outline"
+      onClick={handleSave}
+      data-testid="button-save-payroll"
+    >
+      Save Changes
+    </Button>
+  )}
+  <Button onClick={handleApprove} data-testid="button-approve-payroll">
+    <Download className="h-4 w-4 mr-2" />
+    Download File
+  </Button>
+</div>
+
     </div>
   );
 }
