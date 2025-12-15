@@ -57,8 +57,26 @@ export async function parseAttendanceFile(file: File): Promise<{ fileName: strin
   const photCol = findHeader(["phot", "ph_ot", "ph-ot", "photot"]);
   const commentsCol = findHeader(["comments", "remark", "remarks", "comment"]);
   const totalWorkingDaysCol = findHeader(["totalworkingdaysonsite", "totalworkingdays", "workingdays", "working_days"]);
-  const roundOffCol = findHeader(["roundoff", "round_off", "round-off","Round Off"]);
+  const roundOffCol = findHeader(["roundoff", "round_off", "round-off"]);
   const duesEarnedCol = findHeader(["duesearned", "dues_earned", "dues-earned", "dues"]);
+  
+  // Debug logging - will help identify column mapping issues
+  console.log("📋 Attendance Parser Debug Info:");
+  console.log("Header row index:", headerIdx);
+  console.log("Raw headers:", header);
+  console.log("Normalized headers:", headerTight);
+  console.log("Column mappings:", {
+    empId: empIdCol,
+    name: nameCol,
+    dayCols,
+    ot: otCol,
+    fot: fotCol,
+    phot: photCol,
+    comments: commentsCol,
+    totalWorkingDays: totalWorkingDaysCol,
+    roundOff: roundOffCol,
+    duesEarned: duesEarnedCol,
+  });
 
   if (empIdCol === -1 || dayCols.length === 0) {
     throw new Error("Invalid file format: couldn't find Emp id or day columns (1..31).");
@@ -92,7 +110,11 @@ export async function parseAttendanceFile(file: File): Promise<{ fileName: strin
     }
 
     const dailyStatus: string[] = dayCols.map((idx) => String(row[idx] ?? "").trim());
-    const worked_days = dailyStatus.filter((d) => d === "P" || d === "p").length;
+    // Count P (Present) and M (Medical Leave) as worked days
+    const worked_days = dailyStatus.filter((d) => {
+      const status = d.toUpperCase();
+      return status === "P" || status === "M";
+    }).length;
 
     const toNum = (v: any) => {
       const n = parseFloat(String(v).replace(/[^0-9.-]/g, ""));
@@ -109,7 +131,7 @@ export async function parseAttendanceFile(file: File): Promise<{ fileName: strin
     const roundOffValue = roundOffCol !== -1 ? toNum(row[roundOffCol]) : undefined;
     const unpaid_days = Math.max(totalWorkingDays - worked_days, 0);
 
-    parsedRecords.push({
+    const record = {
       emp_id,
       worked_days,
       total_working_days: totalWorkingDays,
@@ -122,8 +144,20 @@ export async function parseAttendanceFile(file: File): Promise<{ fileName: strin
       comments,
       isValid: true,
       dailyStatus,
-    });
+    };
+    
+    parsedRecords.push(record);
+    
+    // Debug log first 3 records to help identify value issues
+    if (r - headerIdx <= 3) {
+      console.log(`Record ${r - headerIdx} (${emp_id}):`, {
+        rawRow: row.map((cell, idx) => ({ col: idx, header: header[idx], value: cell })),
+        parsed: record,
+      });
+    }
   }
+  
+  console.log(`✅ Parsed ${parsedRecords.length} records successfully`);
 
   return { fileName: file.name, records: parsedRecords };
 }

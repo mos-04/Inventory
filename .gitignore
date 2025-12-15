@@ -8,3 +8,5 @@ vite.config.ts.*
 *.log
 .env.example
 migrations/
+
+/client/src/scripts/
